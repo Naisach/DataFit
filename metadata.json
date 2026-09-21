@@ -1,0 +1,6 @@
+{
+  "name": "Gestión y Planificación de Uniformes",
+  "description": "Plataforma en la nube para recolección de tallas, administración de entregas para dotación permanente y de temporada estival, y reportes analíticos para compras oportunas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
