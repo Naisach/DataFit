@@ -16,7 +16,11 @@ import {
   Shield,
   Sun,
   X,
+  HardDrive,
+  RefreshCw,
 } from 'lucide-react';
+import { exportDeliveriesToDrive } from '../services/googleDriveService';
+import { hasActiveDriveToken } from '../services/authService';
 
 export const DeliveriesView: React.FC = () => {
   const { deliveries, updateDeliveryStatus } = useUniforms();
@@ -28,6 +32,28 @@ export const DeliveriesView: React.FC = () => {
 
   // Selected delivery for printable voucher modal
   const [selectedVoucher, setSelectedVoucher] = useState<UniformDelivery | null>(null);
+
+  const [isExportingDrive, setIsExportingDrive] = useState(false);
+  const [driveExportSuccess, setDriveExportSuccess] = useState<string | null>(null);
+
+  const handleExportDrive = async () => {
+    if (!hasActiveDriveToken()) {
+      alert('Por favor conecte su cuenta en la pestaña "Google Drive" para sincronizar las actas.');
+      return;
+    }
+    setIsExportingDrive(true);
+    setDriveExportSuccess(null);
+    try {
+      const res = await exportDeliveriesToDrive(deliveries);
+      setDriveExportSuccess(`Actas de despacho guardadas en Google Drive: ${res.name}`);
+      setTimeout(() => setDriveExportSuccess(null), 5000);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Error al guardar en Google Drive');
+    } finally {
+      setIsExportingDrive(false);
+    }
+  };
 
   const filteredDeliveries = deliveries.filter((del) => {
     const matchesSearch =
@@ -48,6 +74,16 @@ export const DeliveriesView: React.FC = () => {
 
   return (
     <div className="space-y-5">
+      {/* Drive Alert */}
+      {driveExportSuccess && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 px-4 py-2.5 rounded-xl text-xs flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span className="font-semibold">{driveExportSuccess}</span>
+          </div>
+        </div>
+      )}
+
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -59,14 +95,31 @@ export const DeliveriesView: React.FC = () => {
           </p>
         </div>
 
-        <button
-          id="btn-new-delivery"
-          onClick={() => setIsNewDeliveryOpen(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Registrar Nueva Entrega</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            id="btn-export-deliveries-drive"
+            onClick={handleExportDrive}
+            disabled={isExportingDrive}
+            title="Guardar actas en Google Drive"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-semibold transition-colors shadow-2xs disabled:opacity-50"
+          >
+            {isExportingDrive ? (
+              <RefreshCw className="w-3.5 h-3.5 text-amber-700 animate-spin" />
+            ) : (
+              <HardDrive className="w-3.5 h-3.5 text-amber-600" />
+            )}
+            <span>Guardar en Drive</span>
+          </button>
+
+          <button
+            id="btn-new-delivery"
+            onClick={() => setIsNewDeliveryOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Registrar Nueva Entrega</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI stats */}

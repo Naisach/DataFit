@@ -6,14 +6,8 @@ import {
   ShieldCheck,
   PackageCheck,
   AlertTriangle,
-  Calendar,
   ArrowRight,
-  TrendingUp,
-  Clock,
-  Sparkles,
   CheckCircle2,
-  FileSpreadsheet,
-  Shirt,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -70,96 +64,8 @@ export const DashboardView: React.FC = () => {
     cantidad: employees.filter((e) => e.sizes.footwear === sz).length,
   }));
 
-  // Timeline calculation
-  const today = new Date('2026-09-21');
-  const cutoff = new Date(planningConfig.supplierCutoffDate);
-  const target = new Date(planningConfig.targetDeliveryDate);
-  const diffCutoff = Math.max(0, Math.ceil((cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
-  const diffTarget = Math.max(0, Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
-
   return (
     <div className="space-y-6">
-      {/* Hero Welcome & Critical Procurement Alert */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-md border border-slate-800 relative overflow-hidden">
-        <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30">
-              <Sun className="w-3.5 h-3.5" />
-              <span>Campaña Estival 2026-2027 en Marcha</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-display">
-              Control de Dotación, Tallas y Abastecimiento
-            </h1>
-            <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Monitoreo unificado de uniformes para personal de <strong>Planta Permanente</strong> y <strong>Temporada Estival</strong>. Proyecta compras con colchón de seguridad para evitar quiebres y retrasos en faena.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              id="btn-dash-go-procurement"
-              onClick={() => setActiveView('procurement')}
-              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs transition-all shadow-sm shadow-amber-500/20"
-            >
-              <TrendingUp className="w-4 h-4" />
-              <span>Planificador de Compras</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-            <button
-              id="btn-dash-go-self-service"
-              onClick={() => setActiveView('self_service')}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition-colors border border-white/15"
-            >
-              <Shirt className="w-4 h-4 text-amber-300" />
-              <span>QR Recolección Tallas</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Lead Time Timeline Progress Bar */}
-        <div className="mt-6 pt-5 border-t border-slate-700/60 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
-              <Clock className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">Plazo Licitación / O.C.</p>
-              <p className="text-sm font-semibold text-white">
-                {diffCutoff} días restantes ({planningConfig.supplierCutoffDate})
-              </p>
-              <span className="text-[11px] text-amber-300">Emisión oportuna a talleres</span>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-              <Calendar className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">Entrega en Planta / Faena</p>
-              <p className="text-sm font-semibold text-white">
-                {diffTarget} días restantes ({planningConfig.targetDeliveryDate})
-              </p>
-              <span className="text-[11px] text-emerald-300">Despacho antes de cosechas</span>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">Presupuesto Estimado</p>
-              <p className="text-sm font-semibold text-white">
-                ${(totalBudgetCLP).toLocaleString('es-CL')} CLP
-              </p>
-              <span className="text-[11px] text-slate-300">Incluye +{planningConfig.bufferPercent}% de buffer</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Dotación Total */}
@@ -387,10 +293,10 @@ export const DashboardView: React.FC = () => {
               </div>
             </div>
             <button
-              onClick={() => setActiveView('self_service')}
+              onClick={() => setActiveView('employees')}
               className="text-xs font-semibold text-amber-700 hover:text-amber-800 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200/60"
             >
-              Compartir QR
+              Ver Nómina
             </button>
           </div>
 

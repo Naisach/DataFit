@@ -14,7 +14,7 @@ export const DeliveryModal: React.FC<DeliveryModalProps> = ({
   onClose,
   preselectedEmployee,
 }) => {
-  const { employees, addDelivery } = useUniforms();
+  const { employees, addDelivery, addStockEntrega } = useUniforms();
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [kitType, setKitType] = useState<'estival' | 'permanente' | 'reposicion'>('estival');
@@ -148,6 +148,36 @@ export const DeliveryModal: React.FC<DeliveryModalProps> = ({
       signedAt: status === 'entregada' ? `${deliveryDate} 10:30` : undefined,
       comments,
     });
+
+    // Synchronize deduction in real-time inventory and movement book
+    if (status === 'entregada') {
+      items.forEach((item) => {
+        if (item.delivered) {
+          const cat = item.name.toLowerCase().includes('zapato')
+            ? 'calzado'
+            : item.name.toLowerCase().includes('pantalón')
+            ? 'inferior'
+            : item.name.toLowerCase().includes('chaqueta') || item.name.toLowerCase().includes('softshell')
+            ? 'abrigo'
+            : item.name.toLowerCase().includes('jockey')
+            ? 'proteccion'
+            : 'superior';
+
+          addStockEntrega({
+            garmentName: item.name,
+            category: cat,
+            size: item.size,
+            quantity: item.quantity,
+            documentRef: `Acta-ENT-${currentEmp.rut.split('-')[0]}`,
+            employeeId: currentEmp.id,
+            employeeName: `${currentEmp.fullName} (RUT ${currentEmp.rut})`,
+            responsible: dispatcherName,
+            notes: `Entrega de dotación ${kitTitleMap[kitType]}`,
+            signature: 'Firma digital registrada conforme',
+          });
+        }
+      });
+    }
 
     onClose();
   };

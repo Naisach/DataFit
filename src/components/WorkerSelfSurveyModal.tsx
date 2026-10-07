@@ -50,15 +50,15 @@ export const WorkerSelfSurveyModal: React.FC = () => {
     if (found) {
       setExistingEmployeeId(found.id);
       setNameInput(found.fullName);
-      setPhoneInput(found.phone);
+      setPhoneInput(found.phone || '');
       setWorkerType(found.type);
       setDepartment(found.department);
       setLocation(found.workLocation);
       setGenderFit(found.genderFit);
-      setShirt(found.sizes.shirt);
-      setPants(found.sizes.pants);
-      setFootwear(found.sizes.footwear);
-      setJacket(found.sizes.jacket);
+      setShirt((found.sizes.shirt as ShirtSize) || 'L');
+      setPants((found.sizes.pants as PantsSize) || '42');
+      setFootwear((found.sizes.footwear as FootwearSize) || '42');
+      setJacket((found.sizes.jacket as JacketSize) || 'L');
       setHeadwear(found.sizes.headwear);
     } else {
       setExistingEmployeeId(null);
@@ -114,6 +114,27 @@ export const WorkerSelfSurveyModal: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto py-4 sm:py-8 px-4">
+      {/* Quick navigation bar for admin or return to dashboard */}
+      <div className="flex items-center justify-between mb-3 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 font-bold text-[11px]">
+            <Smartphone className="w-3.5 h-3.5 text-amber-700" />
+            <span>Portal Móvil para Trabajadores</span>
+          </span>
+          <span className="hidden sm:inline text-slate-400">•</span>
+          <span className="hidden sm:inline text-slate-500 text-[11px]">
+            Diseñado para escaneo de código QR en terreno
+          </span>
+        </div>
+
+        <button
+          onClick={() => setActiveView('dashboard')}
+          className="text-slate-600 hover:text-slate-900 font-semibold underline text-xs"
+        >
+          Ir al Panel de Administración →
+        </button>
+      </div>
+
       {/* Container simulating a worker self-service app */}
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
         {/* Banner Header */}

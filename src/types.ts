@@ -8,25 +8,34 @@ export type FootwearSize = '36' | '37' | '38' | '39' | '40' | '41' | '42' | '43'
 export type JacketSize = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL';
 
 export interface EmployeeSizes {
-  shirt: ShirtSize;
-  pants: PantsSize;
-  footwear: FootwearSize;
-  jacket: JacketSize;
+  shirt: ShirtSize | string;
+  pants: PantsSize | string;
+  footwear: FootwearSize | string;
+  jacket: JacketSize | string;
   headwear: string; // 'Estándar' | 'L/XL' | 'Legionario UV'
   gloves?: string;
+  blusa?: string;
+  camisa?: string;
+  sweater?: string;
+  polar?: string;
+  parka?: string;
+  corbata?: string;
 }
 
 export interface Employee {
   id: string;
+  identifier?: string;
+  company?: string;
   rut: string;
   fullName: string;
-  email: string;
-  phone: string;
+  email?: string;
+  phone?: string;
   type: EmployeeType;
   department: string;
   workLocation: string;
   role: string;
   genderFit: GenderFit;
+  gender?: string;
   sizes: EmployeeSizes;
   surveyStatus: SurveyStatus;
   contractStart: string;
@@ -36,6 +45,7 @@ export interface Employee {
   createdAt: string;
   updatedAt: string;
   notes?: string;
+  timestamp?: string;
 }
 
 export type DeliveryStatus = 'programada' | 'entregada' | 'requiere_cambio' | 'cancelada';
@@ -100,4 +110,60 @@ export interface SeasonPlanningConfig {
   currentSeasonalWorkers: number; // los actualmente registrados
   permanentWorkersCount: number;
   bufferPercent: number; // ej: 15%
+}
+
+export interface InventoryItem {
+  id: string;
+  code: string;
+  name: string;
+  category: 'superior' | 'inferior' | 'calzado' | 'abrigo' | 'proteccion';
+  size: string;
+  currentStock: number;
+  minStock: number;
+  unitCostCLP: number;
+  location: string;
+  lastUpdated: string;
+  company?: string;
+  storageType?: string;
+  season?: string;
+}
+
+export interface MatrixRow {
+  id: string;
+  season?: string; // '2025 verano' | '2025 invierno' | '2026 invierno'
+  company: string;
+  storageType: string;
+  garmentName: string;
+  sizes: Record<string, number>;
+  total: number;
+}
+
+export type MovementType = 'ingreso' | 'entrega' | 'ajuste';
+
+export interface StockMovement {
+  id: string;
+  code: string;
+  type: MovementType;
+  date: string;
+  itemId?: string;
+  garmentName: string;
+  category: 'superior' | 'inferior' | 'calzado' | 'abrigo' | 'proteccion';
+  size: string;
+  quantity: number;
+  documentRef: string;
+  party: string; // Proveedor o Nombre/RUT del Trabajador receptor
+  responsible: string;
+  notes?: string;
+  signature?: string;
+}
+
+export type ActiveAppView = 'inventory' | 'employees' | 'procurement' | 'movements' | 'drive' | 'dashboard' | 'deliveries';
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'encargado' | 'operador';
+  createdAt: string;
 }
