@@ -10,7 +10,9 @@ import {
 import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize Firebase App safely if not already initialized
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+// Firestore uses a separately named Firebase app. Check specifically for the
+// default app before calling getApp(), since another named app may already exist.
+const app = getApps().find((candidate) => candidate.name === '[DEFAULT]') || initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
 // All Google Drive scopes requested and configured
