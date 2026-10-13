@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
+import { useFirestoreAppState } from '../hooks/useFirestoreAppState';
 import {
   Employee,
   UniformDelivery,
@@ -102,18 +103,12 @@ interface UniformsContextType {
   restoreBackup: (backupData: {
     employees?: Employee[];
     inventory?: InventoryItem[];
+    inventoryMatrix?: MatrixRow[];
     movements?: StockMovement[];
     deliveries?: UniformDelivery[];
     planningConfig?: SeasonPlanningConfig;
   }) => void;
 }
-
-const STORAGE_KEY_EMPLOYEES = 'uniforms_app_employees_v4';
-const STORAGE_KEY_DELIVERIES = 'uniforms_app_deliveries_v4';
-const STORAGE_KEY_CONFIG = 'uniforms_app_config_v4';
-const STORAGE_KEY_INVENTORY = 'uniforms_app_inventory_v4';
-const STORAGE_KEY_MATRIX = 'uniforms_app_matrix_v4';
-const STORAGE_KEY_MOVEMENTS = 'uniforms_app_movements_v4';
 
 const DEFAULT_PLANNING_CONFIG: SeasonPlanningConfig = {
   seasonName: 'Campaña Estival 2026-2027',
@@ -123,6 +118,12 @@ const DEFAULT_PLANNING_CONFIG: SeasonPlanningConfig = {
   currentSeasonalWorkers: 8,
   permanentWorkersCount: 7,
   bufferPercent: 15,
+};
+
+// Missing cloud documents remain empty. Sample records are never seeded on load.
+const CLOUD_DEFAULTS = {
+  employees: [], inventory: [], matrix: [], movements: [], deliveries: [],
+  config: DEFAULT_PLANNING_CONFIG,
 };
 
 const UniformsContext = createContext<UniformsContextType | undefined>(undefined);
@@ -155,130 +156,31 @@ const detectInitialView = (): ActiveAppView | 'self_service' => {
 };
 
 export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Inventory State
-  const [inventory, setInventory] = useState<InventoryItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_INVENTORY);
-      return saved ? JSON.parse(saved) : OFFICIAL_INVENTORY_ITEMS;
-    } catch {
-      return OFFICIAL_INVENTORY_ITEMS;
-    }
-  });
-
-  // Inventory Matrix State
-  const [inventoryMatrix, setInventoryMatrix] = useState<MatrixRow[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_MATRIX);
-      return saved ? JSON.parse(saved) : OFFICIAL_INVENTORY_MATRIX;
-    } catch {
-      return OFFICIAL_INVENTORY_MATRIX;
-    }
-  });
-
-  // Movements State (Ingresos y Entregas)
-  const [movements, setMovements] = useState<StockMovement[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_MOVEMENTS);
-      return saved ? JSON.parse(saved) : INITIAL_MOVEMENTS;
-    } catch {
-      return INITIAL_MOVEMENTS;
-    }
-  });
-
-  // Employees State
-  const [employees, setEmployees] = useState<Employee[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_EMPLOYEES);
-      return saved ? JSON.parse(saved) : OFFICIAL_EMPLOYEES;
-    } catch {
-      return OFFICIAL_EMPLOYEES;
-    }
-  });
-
-  // Deliveries State
-  const [deliveries, setDeliveries] = useState<UniformDelivery[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_DELIVERIES);
-      return saved ? JSON.parse(saved) : INITIAL_DELIVERIES;
-    } catch {
-      return INITIAL_DELIVERIES;
-    }
-  });
-
+  const cloud = useFirestoreAppState(CLOUD_DEFAULTS);
+  const employees = cloud.values.employees as Employee[];
+  const inventory = cloud.values.inventory as InventoryItem[];
+  const inventoryMatrix = cloud.values.matrix as MatrixRow[];
+  const movements = cloud.values.movements as StockMovement[];
+  const deliveries = cloud.values.deliveries as UniformDelivery[];
+  const setEmployees: React.Dispatch<React.SetStateAction<Employee[]>> = (value) => cloud.setField('employees', value);
+  const setInventory: React.Dispatch<React.SetStateAction<InventoryItem[]>> = (value) => cloud.setField('inventory', value);
+  const setInventoryMatrix: React.Dispatch<React.SetStateAction<MatrixRow[]>> = (value) => cloud.setField('matrix', value);
+  const setMovements: React.Dispatch<React.SetStateAction<StockMovement[]>> = (value) => cloud.setField('movements', value);
+  const setDeliveries: React.Dispatch<React.SetStateAction<UniformDelivery[]>> = (value) => cloud.setField('deliveries', value);
+  const employeeCounts = {
+    permanentWorkersCount: employees.filter((employee) => employee.type === 'permanente').length,
+    currentSeasonalWorkers: employees.filter((employee) => employee.type === 'estival').length,
+  };
+  // Derived counts update the UI without writing to Firestore during hydration.
+  const planningConfig: SeasonPlanningConfig = { ...DEFAULT_PLANNING_CONFIG, ...cloud.values.config, ...employeeCounts };
+  const setPlanningConfig: React.Dispatch<React.SetStateAction<SeasonPlanningConfig>> = (action) => {
+    cloud.setField('config', (previous: SeasonPlanningConfig) =>
+      typeof action === 'function' ? action({ ...DEFAULT_PLANNING_CONFIG, ...previous, ...employeeCounts }) : action);
+  };
   const [garments] = useState<GarmentSpec[]>(INITIAL_GARMENTS);
-
-  const [planningConfig, setPlanningConfig] = useState<SeasonPlanningConfig>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_CONFIG);
-      return saved ? JSON.parse(saved) : DEFAULT_PLANNING_CONFIG;
-    } catch {
-      return DEFAULT_PLANNING_CONFIG;
-    }
-  });
-
   const [activeView, setActiveView] = useState<ActiveAppView | 'self_service'>(detectInitialView);
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
-
-  // Sync to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(inventory));
-    } catch (e) {
-      console.warn('Failed to save inventory to localStorage', e);
-    }
-  }, [inventory]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_MATRIX, JSON.stringify(inventoryMatrix));
-    } catch (e) {
-      console.warn('Failed to save matrix to localStorage', e);
-    }
-  }, [inventoryMatrix]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_MOVEMENTS, JSON.stringify(movements));
-    } catch (e) {
-      console.warn('Failed to save movements to localStorage', e);
-    }
-  }, [movements]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_EMPLOYEES, JSON.stringify(employees));
-    } catch (e) {
-      console.warn('Failed to save employees to localStorage', e);
-    }
-  }, [employees]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_DELIVERIES, JSON.stringify(deliveries));
-    } catch (e) {
-      console.warn('Failed to save deliveries to localStorage', e);
-    }
-  }, [deliveries]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(planningConfig));
-    } catch (e) {
-      console.warn('Failed to save config to localStorage', e);
-    }
-  }, [planningConfig]);
-
-  // Keep employee counts in sync in planning config
-  useEffect(() => {
-    const perm = employees.filter((e) => e.type === 'permanente').length;
-    const seas = employees.filter((e) => e.type === 'estival').length;
-    setPlanningConfig((prev) => ({
-      ...prev,
-      permanentWorkersCount: perm,
-      currentSeasonalWorkers: seas,
-    }));
-  }, [employees]);
 
   // URL hash sync
   const handleSetActiveView = (view: ActiveAppView | 'self_service') => {
@@ -772,6 +674,7 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const restoreBackup = (backupData: {
     employees?: Employee[];
     inventory?: InventoryItem[];
+    inventoryMatrix?: MatrixRow[];
     movements?: StockMovement[];
     deliveries?: UniformDelivery[];
     planningConfig?: SeasonPlanningConfig;
@@ -781,6 +684,9 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     if (backupData.inventory && Array.isArray(backupData.inventory)) {
       setInventory(backupData.inventory);
+    }
+    if (backupData.inventoryMatrix && Array.isArray(backupData.inventoryMatrix)) {
+      setInventoryMatrix(backupData.inventoryMatrix);
     }
     if (backupData.movements && Array.isArray(backupData.movements)) {
       setMovements(backupData.movements);
@@ -794,27 +700,50 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const resetToSampleData = () => {
+    if (!window.confirm("Esto reemplazará los datos compartidos en Firestore por datos de ejemplo. ¿Continuar?")) return;
     setInventory(INITIAL_INVENTORY);
+    setInventoryMatrix([]);
     setMovements(INITIAL_MOVEMENTS);
     setEmployees(INITIAL_EMPLOYEES);
     setDeliveries(INITIAL_DELIVERIES);
     setPlanningConfig(DEFAULT_PLANNING_CONFIG);
-    localStorage.removeItem(STORAGE_KEY_INVENTORY);
-    localStorage.removeItem(STORAGE_KEY_MATRIX);
-    localStorage.removeItem(STORAGE_KEY_MOVEMENTS);
-    localStorage.removeItem(STORAGE_KEY_EMPLOYEES);
-    localStorage.removeItem(STORAGE_KEY_DELIVERIES);
-    localStorage.removeItem(STORAGE_KEY_CONFIG);
   };
 
   const resetToOfficialData = () => {
+    if (!window.confirm("Esto reemplazará trabajadores e inventario compartidos por los datos incluidos en el código. ¿Continuar?")) return;
     setInventory(OFFICIAL_INVENTORY_ITEMS);
     setInventoryMatrix(OFFICIAL_INVENTORY_MATRIX);
     setEmployees(OFFICIAL_EMPLOYEES);
-    localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(OFFICIAL_INVENTORY_ITEMS));
-    localStorage.setItem(STORAGE_KEY_MATRIX, JSON.stringify(OFFICIAL_INVENTORY_MATRIX));
-    localStorage.setItem(STORAGE_KEY_EMPLOYEES, JSON.stringify(OFFICIAL_EMPLOYEES));
   };
+
+  const downloadPendingBackup = () => {
+    const blob = new Blob([JSON.stringify({ employees, inventory, inventoryMatrix, movements, deliveries, planningConfig }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'datafit-cambios-pendientes.json';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  if (!cloud.ready || cloud.error) {
+    return (
+      <main className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
+        <div className="max-w-xl bg-white rounded-xl shadow p-6 space-y-4">
+          <h1 className="text-lg font-semibold">{cloud.error ? 'No se pudieron sincronizar los datos' : 'Cargando datos de DataFit…'}</h1>
+          <p role={cloud.error ? 'alert' : 'status'}>{cloud.error || 'Recuperando trabajadores e inventario guardados.'}</p>
+          {cloud.error && (
+            <div className="flex flex-wrap gap-3">
+              {cloud.ready && cloud.pending && <button className="rounded bg-amber-500 px-4 py-2" onClick={downloadPendingBackup}>Descargar cambios pendientes</button>}
+              <button className="rounded bg-slate-800 text-white px-4 py-2" onClick={() => {
+                if (!cloud.pending || window.confirm('Descarga primero tus cambios pendientes. Al recargar se descartarán los cambios que no se guardaron. ¿Recargar?')) window.location.reload();
+              }}>Volver a cargar</button>
+            </div>
+          )}
+        </div>
+      </main>
+    );
+  }
 
   return (
     <UniformsContext.Provider
@@ -854,6 +783,7 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         restoreBackup,
       }}
     >
+      {cloud.pending && <div role="status" className="fixed bottom-4 right-4 z-50 rounded-lg bg-amber-100 border border-amber-300 px-4 py-2 text-sm text-amber-900 shadow">Guardando cambios…</div>}
       {children}
     </UniformsContext.Provider>
   );
