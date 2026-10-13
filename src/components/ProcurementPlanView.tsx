@@ -5,11 +5,9 @@ import {
   Sliders,
   Calendar,
   Clock,
-  Sparkles,
   Download,
   Printer,
   FileSpreadsheet,
-  ShieldCheck,
   Sun,
   AlertTriangle,
   CheckCircle2,
@@ -41,13 +39,9 @@ export const ProcurementPlanView: React.FC = () => {
     setPlanningConfig,
     garments,
     employees,
-    aiAnalysis,
-    isAiLoading,
-    runAiProcurementAnalysis,
   } = useUniforms();
 
   const [selectedGarmentFilter, setSelectedGarmentFilter] = useState<string>('todos');
-  const [procurementNotes, setProcurementNotes] = useState('');
   const [isTenderModalOpen, setIsTenderModalOpen] = useState(false);
 
   // Timeline computation
@@ -435,110 +429,6 @@ export const ProcurementPlanView: React.FC = () => {
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
-
-      {/* AI Procurement Strategist (Gemini 3.8 Flash) */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 rounded-2xl p-5 text-white shadow-md border border-slate-700">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-700 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-400/20 text-amber-300 flex items-center justify-center font-bold">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <span>Asistente Inteligente de Adquisiciones & Licitación</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-400/30">
-                  Gemini AI
-                </span>
-              </h2>
-              <p className="text-xs text-slate-300">
-                Analiza las curvas de tallas, detecta riesgos de quiebre y genera pliegos técnicos para proveedores
-              </p>
-            </div>
-          </div>
-
-          <button
-            id="btn-run-ai-analysis"
-            disabled={isAiLoading}
-            onClick={() => runAiProcurementAnalysis(procurementNotes)}
-            className="flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm disabled:opacity-50"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>{isAiLoading ? 'Analizando Compras...' : 'Generar Informe Estratégico'}</span>
-          </button>
-        </div>
-
-        {/* Optional Notes Input for Context */}
-        <div className="mt-3 flex items-center gap-2">
-          <input
-            type="text"
-            value={procurementNotes}
-            onChange={(e) => setProcurementNotes(e.target.value)}
-            placeholder="Contexto adicional (ej: Faenas con calor extremo sobre 32°C, preferencia tela certificada UV)..."
-            className="w-full bg-slate-800/80 border border-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-lg placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
-          />
-        </div>
-
-        {/* AI Output Display */}
-        {aiAnalysis ? (
-          <div className="mt-4 pt-4 border-t border-slate-700/80 space-y-4 text-xs">
-            {/* Executive Summary */}
-            <div className="bg-slate-800/60 p-3.5 rounded-xl border border-slate-700">
-              <h3 className="font-bold text-amber-300 mb-1 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                Diagnóstico de Compras Oportunas:
-              </h3>
-              <p className="text-slate-200 leading-relaxed">{aiAnalysis.executiveSummary}</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* Buffer and size distribution advice */}
-              <div className="bg-slate-800/60 p-3.5 rounded-xl border border-slate-700">
-                <h4 className="font-bold text-emerald-400 mb-1 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4" /> Recomendación de Colchón y Curva de Tallas:
-                </h4>
-                <p className="text-slate-300 leading-relaxed">{aiAnalysis.bufferRecommendation}</p>
-              </div>
-
-              {/* Technical specs recommendation */}
-              <div className="bg-slate-800/60 p-3.5 rounded-xl border border-slate-700">
-                <h4 className="font-bold text-indigo-300 mb-1 flex items-center gap-1.5">
-                  <Sun className="w-4 h-4" /> Especificaciones Técnicas Estivales:
-                </h4>
-                <p className="text-slate-300 leading-relaxed">{aiAnalysis.technicalSpecsRecommendation}</p>
-              </div>
-            </div>
-
-            {/* Action Plan Milestones */}
-            {aiAnalysis.procurementActionPlan && (
-              <div className="bg-slate-800/60 p-3.5 rounded-xl border border-slate-700">
-                <h4 className="font-bold text-white mb-2 flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-amber-400" /> Cronograma de Hitos Críticos:
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                  {aiAnalysis.procurementActionPlan.map((step: any, idx: number) => (
-                    <div key={idx} className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700 text-[11px]">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-amber-300 truncate">{step.step}</span>
-                        <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                          step.impact === 'Crítico' ? 'bg-rose-500/20 text-rose-300' : 'bg-blue-500/20 text-blue-300'
-                        }`}>
-                          {step.impact}
-                        </span>
-                      </div>
-                      <p className="text-slate-400 text-[10px] mb-1">Plazo: {step.timeframe}</p>
-                      <p className="text-slate-300">{step.details}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="mt-3 text-xs text-slate-400 italic">
-            💡 Haz clic en "Generar Informe Estratégico" para obtener recomendaciones automáticas de tallas y negociación textil con IA.
-          </div>
-        )}
       </div>
 
       {/* Sizing Matrix Breakdown Table */}

@@ -1,8 +1,0 @@
-{
-  "projects": {
-    "default": "datafitjac",
-    "datafitjac": "datafitjac"
-  },
-  "targets": {},
-  "etags": {}
-}

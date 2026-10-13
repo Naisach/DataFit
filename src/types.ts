@@ -155,6 +155,7 @@ export interface StockMovement {
   responsible: string;
   notes?: string;
   signature?: string;
+  company?: string;
 }
 
 export type ActiveAppView = 'inventory' | 'employees' | 'procurement' | 'movements' | 'drive' | 'dashboard' | 'deliveries';

@@ -26,6 +26,7 @@ export const MovementsView: React.FC = () => {
 
   // Filters
   const [activeTab, setActiveTab] = useState<'all' | 'ingreso' | 'entrega' | 'ajuste'>('all');
+  const [selectedCompany, setSelectedCompany] = useState<string>('todas');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMovement, setSelectedMovement] = useState<StockMovement | null>(null);
 
@@ -37,6 +38,39 @@ export const MovementsView: React.FC = () => {
   const showNotification = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  // Helper to resolve company for a movement
+  const getMovementCompany = (mov: StockMovement): string => {
+    if (mov.company) return mov.company;
+    const partyUpper = mov.party.toUpperCase();
+    const notesUpper = (mov.notes || '').toUpperCase();
+    const garmentUpper = mov.garmentName.toUpperCase();
+    if (partyUpper.includes('JAC') || notesUpper.includes('JAC') || garmentUpper.includes('JAC')) return 'JAC';
+    if (
+      partyUpper.includes('BIO BIO') ||
+      partyUpper.includes('BÍO BÍO') ||
+      partyUpper.includes('BBB') ||
+      notesUpper.includes('BIO BIO') ||
+      notesUpper.includes('BBB') ||
+      garmentUpper.includes('BBB')
+    ) {
+      return 'BBB';
+    }
+
+    const emp = employees.find(
+      (e) =>
+        e.fullName.toLowerCase() === mov.party.toLowerCase() ||
+        (e.rut && mov.party.includes(e.rut)) ||
+        mov.party.toLowerCase().includes(e.fullName.toLowerCase())
+    );
+    if (emp?.company) return emp.company;
+
+    if (mov.itemId) {
+      const item = inventory.find((i) => i.id === mov.itemId);
+      if (item?.company) return item.company;
+    }
+    return 'General';
   };
 
   // KPIs
@@ -51,25 +85,31 @@ export const MovementsView: React.FC = () => {
   const filteredMovements = useMemo(() => {
     return movements.filter((mov) => {
       const matchesTab = activeTab === 'all' || mov.type === activeTab;
+      const movCompany = getMovementCompany(mov);
+      const matchesCompany =
+        selectedCompany === 'todas' || movCompany === selectedCompany;
+
       const matchesSearch =
         mov.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         mov.garmentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         mov.size.toLowerCase().includes(searchTerm.toLowerCase()) ||
         mov.party.toLowerCase().includes(searchTerm.toLowerCase()) ||
         mov.documentRef.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        mov.responsible.toLowerCase().includes(searchTerm.toLowerCase());
+        mov.responsible.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        movCompany.toLowerCase().includes(searchTerm.toLowerCase());
 
-      return matchesTab && matchesSearch;
+      return matchesTab && matchesCompany && matchesSearch;
     });
-  }, [movements, activeTab, searchTerm]);
+  }, [movements, activeTab, selectedCompany, searchTerm, employees, inventory]);
 
   // Export CSV
   const handleExportCSV = () => {
-    const headers = ['Código', 'Fecha y Hora', 'Tipo', 'Prenda / Artículo', 'Categoría', 'Talla', 'Cantidad', 'Contraparte (Proveedor / Trabajador)', 'Documento de Respaldo', 'Responsable Bodega', 'Observaciones'];
+    const headers = ['Código', 'Fecha y Hora', 'Tipo', 'Empresa', 'Prenda / Artículo', 'Categoría', 'Talla', 'Cantidad', 'Contraparte (Proveedor / Trabajador)', 'Documento de Respaldo', 'Responsable Bodega', 'Observaciones'];
     const rows = filteredMovements.map((m) => [
       m.code,
       m.date,
       m.type.toUpperCase(),
+      getMovementCompany(m),
       `"${m.garmentName}"`,
       m.category,
       m.size,
@@ -325,6 +365,20 @@ export const MovementsView: React.FC = () => {
             </button>
           </div>
 
+          {/* Empresa Filter Dropdown */}
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedCompany}
+              onChange={(e) => setSelectedCompany(e.target.value)}
+              className="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 cursor-pointer"
+            >
+              <option value="todas">Empresas: Todas</option>
+              <option value="JAC">Cía. JAC</option>
+              <option value="BBB">Buses Bío Bío</option>
+              <option value="General">General / Ambas</option>
+            </select>
+          </div>
+
           {/* Search Box */}
           <div className="relative flex-1 max-w-sm">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -349,6 +403,76 @@ export const MovementsView: React.FC = () => {
 
       {/* Movements Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        {/* Table Top Toolbar with Quick Company Filter Pills */}
+        <div className="px-5 py-3 border-b border-slate-200 bg-slate-50/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs font-bold text-slate-900">
+              {filteredMovements.length} movimientos
+            </span>
+            {selectedCompany !== 'todas' && (
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">
+                Filtro empresa: {selectedCompany === 'JAC' ? 'Cía. JAC' : selectedCompany === 'BBB' ? 'Buses Bío Bío' : selectedCompany}
+              </span>
+            )}
+          </div>
+
+          {/* Quick Company Buttons */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-medium text-slate-500 mr-1">Filtrar por Empresa:</span>
+            <div className="flex items-center bg-white p-0.5 rounded-lg border border-slate-200 shadow-2xs">
+              <button
+                onClick={() => setSelectedCompany('todas')}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                  selectedCompany === 'todas'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Todas ({movements.length})
+              </button>
+              <button
+                onClick={() => setSelectedCompany('JAC')}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1 ${
+                  selectedCompany === 'JAC'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+                    : 'text-slate-600 hover:text-amber-800'
+                }`}
+              >
+                <span>JAC</span>
+                <span className="text-[10px] opacity-75 font-mono">
+                  ({movements.filter((m) => getMovementCompany(m) === 'JAC').length})
+                </span>
+              </button>
+              <button
+                onClick={() => setSelectedCompany('BBB')}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1 ${
+                  selectedCompany === 'BBB'
+                    ? 'bg-blue-600 text-white font-bold shadow-xs'
+                    : 'text-slate-600 hover:text-blue-800'
+                }`}
+              >
+                <span>Buses Bío Bío</span>
+                <span className="text-[10px] opacity-75 font-mono">
+                  ({movements.filter((m) => getMovementCompany(m) === 'BBB').length})
+                </span>
+              </button>
+              <button
+                onClick={() => setSelectedCompany('General')}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1 ${
+                  selectedCompany === 'General'
+                    ? 'bg-slate-700 text-white font-bold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>General</span>
+                <span className="text-[10px] opacity-75 font-mono">
+                  ({movements.filter((m) => getMovementCompany(m) === 'General').length})
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-600">
             <thead className="bg-slate-50/80 text-slate-500 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
@@ -357,6 +481,7 @@ export const MovementsView: React.FC = () => {
                 <th className="py-3.5 px-4">Fecha y Hora</th>
                 <th className="py-3.5 px-3 text-center">Tipo</th>
                 <th className="py-3.5 px-4">Prenda / Artículo</th>
+                <th className="py-3.5 px-3 text-center">Empresa</th>
                 <th className="py-3.5 px-3 text-center">Talla</th>
                 <th className="py-3.5 px-4 text-center">Cantidad</th>
                 <th className="py-3.5 px-4">Contraparte (Proveedor / Trabajador)</th>
@@ -370,6 +495,7 @@ export const MovementsView: React.FC = () => {
                 const isIngreso = mov.type === 'ingreso';
                 const isEntrega = mov.type === 'entrega';
                 const isAjuste = mov.type === 'ajuste';
+                const movCompany = getMovementCompany(mov);
 
                 return (
                   <tr key={mov.id} className="hover:bg-slate-50/60 transition-colors">
@@ -411,6 +537,21 @@ export const MovementsView: React.FC = () => {
                     {/* Prenda */}
                     <td className="py-3 px-4 font-semibold text-slate-900">
                       {mov.garmentName}
+                    </td>
+
+                    {/* Empresa */}
+                    <td className="py-3 px-3 text-center">
+                      <span
+                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                          movCompany === 'JAC'
+                            ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                            : movCompany === 'BBB'
+                            ? 'bg-blue-100 text-blue-900 border border-blue-200'
+                            : 'bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}
+                      >
+                        {movCompany === 'BBB' ? 'Bío Bío' : movCompany}
+                      </span>
                     </td>
 
                     {/* Talla */}

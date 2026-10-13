@@ -39,7 +39,6 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ onOpenDeliveryForE
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<string>('todas');
-  const [selectedRole, setSelectedRole] = useState<string>('todos');
   const [selectedGender, setSelectedGender] = useState<string>('todos');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('todos');
 
@@ -51,15 +50,6 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ onOpenDeliveryForE
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
-
-  // Distinct roles for filter
-  const roles = useMemo(() => {
-    const set = new Set<string>();
-    employees.forEach((e) => {
-      if (e.role) set.add(e.role);
-    });
-    return Array.from(set).sort();
-  }, [employees]);
 
   // Filtered employees list
   const filteredEmployees = useMemo(() => {
@@ -78,8 +68,6 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ onOpenDeliveryForE
         (selectedCompany === 'BBB' && (emp.company?.includes('Bio Bio') || emp.workLocation?.includes('Bio Bio'))) ||
         (selectedCompany === 'JAC' && (emp.company?.includes('Jac') || emp.workLocation?.includes('JAC')));
 
-      const matchesRole = selectedRole === 'todos' || emp.role === selectedRole;
-
       const empGender = emp.gender || (emp.genderFit === 'femenino' ? 'Mujer' : 'Hombre');
       const matchesGender = selectedGender === 'todos' || empGender === selectedGender;
 
@@ -92,9 +80,9 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ onOpenDeliveryForE
         matchesStatus = Boolean(emp.timestamp?.includes('MANUAL'));
       }
 
-      return matchesSearch && matchesCompany && matchesRole && matchesGender && matchesStatus;
+      return matchesSearch && matchesCompany && matchesGender && matchesStatus;
     });
-  }, [employees, searchTerm, selectedCompany, selectedRole, selectedGender, selectedStatusFilter]);
+  }, [employees, searchTerm, selectedCompany, selectedGender, selectedStatusFilter]);
 
   // Paginated slice
   const totalPages = Math.ceil(filteredEmployees.length / pageSize) || 1;
@@ -213,36 +201,33 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ onOpenDeliveryForE
       )}
 
       {/* Top Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 font-display flex items-center gap-2">
-            <span>Registros de Trabajadores</span>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-              {totalCount} Registrados
-            </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold text-slate-900 font-display">
+            Trabajadores
           </h1>
-          <p className="text-xs text-slate-500">
-            Nómina oficial y asignación de tallas de dotación para Buses Bío Bío y Cía. JAC Transportes
-          </p>
+          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+            {totalCount} registrados
+          </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <button
             id="btn-open-bulk-import"
             onClick={() => setIsBulkModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition-all shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition-colors shadow-2xs"
           >
-            <Upload className="w-4 h-4" />
-            <span>Carga Masiva CSV</span>
+            <Upload className="w-3.5 h-3.5 text-slate-500" />
+            <span>Carga Masiva</span>
           </button>
 
           <button
             id="btn-export-csv"
             onClick={handleExportCsv}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition-colors shadow-2xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition-colors shadow-2xs"
           >
-            <Download className="w-3.5 h-3.5 text-slate-600" />
-            <span>Descargar CSV</span>
+            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <span>Exportar CSV</span>
           </button>
 
           <button
@@ -250,29 +235,29 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ onOpenDeliveryForE
             onClick={handleExportDrive}
             disabled={isExportingDrive}
             title="Guardar archivo en Google Drive"
-            className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition-colors shadow-2xs disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition-colors shadow-2xs disabled:opacity-50"
           >
             {isExportingDrive ? (
               <RefreshCw className="w-3.5 h-3.5 text-amber-700 animate-spin" />
             ) : (
-              <HardDrive className="w-3.5 h-3.5 text-amber-600" />
+              <HardDrive className="w-3.5 h-3.5 text-slate-500" />
             )}
-            <span>Guardar en Drive</span>
+            <span>Drive</span>
           </button>
 
           <button
             id="btn-new-employee"
             onClick={handleOpenNew}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition-colors shadow-2xs"
           >
-            <Plus className="w-4 h-4 text-amber-400" />
-            <span>Nuevo Registro</span>
+            <Plus className="w-3.5 h-3.5 text-amber-400" />
+            <span>Nuevo</span>
           </button>
         </div>
       </div>
 
-      {/* Summary Cards by Company */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* Summary Filter Pills by Company */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
         <button
           onClick={() => {
             setSelectedCompany('todas');
@@ -288,9 +273,9 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ onOpenDeliveryForE
             <span className="text-[11px] font-medium uppercase tracking-wider">Total Nómina</span>
             <Users className="w-4 h-4 opacity-70" />
           </div>
-          <div className="mt-1 flex items-baseline gap-2">
+          <div className="mt-1 flex items-baseline gap-1.5">
             <span className="text-xl font-bold">{totalCount}</span>
-            <span className="text-[11px] opacity-70">colaboradores</span>
+            <span className="text-xs opacity-70">colaboradores</span>
           </div>
         </button>
 
@@ -309,9 +294,9 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ onOpenDeliveryForE
             <span className="text-[11px] font-medium uppercase tracking-wider text-blue-700">Buses Bío Bío</span>
             <Bus className="w-4 h-4 text-blue-600" />
           </div>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-slate-900">{bbbCount}</span>
-            <span className="text-[11px] text-slate-500">BBB SpA</span>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className={`text-xl font-bold ${selectedCompany === 'BBB' ? 'text-white' : 'text-slate-900'}`}>{bbbCount}</span>
+            <span className="text-xs opacity-70">colaboradores</span>
           </div>
         </button>
 
@@ -330,27 +315,27 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ onOpenDeliveryForE
             <span className="text-[11px] font-medium uppercase tracking-wider text-amber-700">Cía. JAC</span>
             <Bus className="w-4 h-4 text-amber-600" />
           </div>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-slate-900">{jacCount}</span>
-            <span className="text-[11px] text-slate-500">JAC Transportes</span>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className={`text-xl font-bold ${selectedCompany === 'JAC' ? 'text-white' : 'text-slate-900'}`}>{jacCount}</span>
+            <span className="text-xs opacity-70">colaboradores</span>
           </div>
         </button>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
+      <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
         {/* Search */}
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Buscar por ID, nombre, cargo o RUT..."
+            placeholder="Buscar por ID, nombre, RUT o cargo..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
           />
         </div>
 
@@ -363,28 +348,11 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ onOpenDeliveryForE
               setSelectedCompany(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-semibold focus:outline-none"
+            className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium focus:outline-none"
           >
             <option value="todas">Empresas: Todas</option>
-            <option value="BBB">Buses Bio Bio SpA</option>
-            <option value="JAC">Cia. Jac Transportes</option>
-          </select>
-
-          {/* Cargo filter */}
-          <select
-            value={selectedRole}
-            onChange={(e) => {
-              setSelectedRole(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none"
-          >
-            <option value="todos">Cargos: Todos</option>
-            {roles.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
+            <option value="BBB">Buses Bío Bío</option>
+            <option value="JAC">Cía. JAC</option>
           </select>
 
           {/* Género filter */}
@@ -418,19 +386,17 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ onOpenDeliveryForE
 
           {(searchTerm ||
             selectedCompany !== 'todas' ||
-            selectedRole !== 'todos' ||
             selectedGender !== 'todos' ||
             selectedStatusFilter !== 'todos') && (
             <button
               onClick={() => {
                 setSearchTerm('');
                 setSelectedCompany('todas');
-                setSelectedRole('todos');
                 setSelectedGender('todos');
                 setSelectedStatusFilter('todos');
                 setCurrentPage(1);
               }}
-              className="text-xs text-rose-600 hover:text-rose-700 font-semibold px-2 py-1"
+              className="text-xs text-rose-600 hover:text-rose-700 font-medium px-2 py-1"
             >
               Limpiar
             </button>

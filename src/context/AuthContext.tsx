@@ -13,7 +13,7 @@ interface AuthContextType {
 }
 
 const STORAGE_USERS_KEY = 'bodega_registered_users_v1';
-const STORAGE_SESSION_KEY = 'bodega_active_session_v1';
+const STORAGE_SESSION_KEY = 'bodega_active_session_v2';
 
 interface StoredAccount extends AuthUser {
   passwordHash: string; // Stored securely in client storage for self-contained auth
@@ -68,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {
       console.error('Error loading session:', e);
     }
-    return DEFAULT_ACCOUNTS[0]; // Inicia con sesión activa para acceso inmediato al inventario y registros
+    return null; // Al entrar a la página se muestra exclusivamente el menú de inicio de sesión
   });
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);

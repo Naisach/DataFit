@@ -409,362 +409,193 @@ export const InventoryView: React.FC = () => {
         </div>
       )}
 
-      {/* Top Header & Fast Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 font-display flex items-center gap-2.5">
-            <span>Control de Inventario y Stock</span>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-              {matrixStats.grandTotal.toLocaleString('es-CL')} Unidades Físicas
-            </span>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold text-slate-900 font-display">
+            Inventario
           </h1>
-          <p className="text-xs text-slate-500">
-            Existencias por prenda, talla y ubicación para Cía. JAC Transportes y Buses Bío Bío SpA
-          </p>
+          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+            {matrixStats.grandTotal.toLocaleString('es-CL')} unidades
+          </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Carga Masiva Button */}
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setIsBulkModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition-colors shadow-2xs"
           >
-            <Upload className="w-4 h-4" />
-            <span>Carga Masiva CSV</span>
+            <Upload className="w-3.5 h-3.5 text-slate-500" />
+            <span>Carga Masiva</span>
           </button>
 
-          {/* Export CSV Button */}
           <button
             onClick={() => (viewMode === 'matrix' ? handleExportMatrixCSV() : handleExportItemsCSV())}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition-colors shadow-2xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition-colors shadow-2xs"
           >
-            <Download className="w-3.5 h-3.5 text-slate-600" />
-            <span>Descargar CSV</span>
+            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <span>Exportar CSV</span>
           </button>
 
-          {/* Quick Ingreso Button */}
           <button
             onClick={() => setIsIngresoModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition-colors shadow-2xs"
           >
-            <PackagePlus className="w-4 h-4 text-amber-400" />
-            <span>Ingreso (+)</span>
+            <Plus className="w-3.5 h-3.5 text-amber-400" />
+            <span>Ingreso</span>
           </button>
         </div>
       </div>
 
-      {/* Summary KPI Cards for the 3 Seasons */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {/* 2025 Verano */}
-        <button
-          onClick={() => setSelectedSeason('2025 verano')}
-          className={`text-left p-3.5 rounded-xl border transition-all ${
-            selectedSeason === '2025 verano'
-              ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-md ring-2 ring-amber-500/20'
-              : 'bg-white hover:bg-amber-50/50 border-slate-200 text-slate-900 shadow-2xs'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-1">
-            <span className={`text-[11px] font-bold uppercase tracking-wider ${selectedSeason === '2025 verano' ? 'text-slate-950' : 'text-amber-700'}`}>
-              ☀️ 2025 Verano
-            </span>
-            <span className="text-xs font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300">
-              M/C
-            </span>
-          </div>
-          <div className="text-xl font-bold">
-            {stats2025Verano.total.toLocaleString('es-CL')}{' '}
-            <span className={`text-xs font-normal ${selectedSeason === '2025 verano' ? 'text-slate-900' : 'text-slate-500'}`}>
-              unidades
-            </span>
-          </div>
-          <div className={`text-[10px] mt-0.5 font-medium ${selectedSeason === '2025 verano' ? 'text-slate-900' : 'text-amber-700'}`}>
-            JAC: {stats2025Verano.jac} | BBB: {stats2025Verano.bbb}
-          </div>
-        </button>
-
-        {/* 2025 Invierno */}
-        <button
-          onClick={() => setSelectedSeason('2025 invierno')}
-          className={`text-left p-3.5 rounded-xl border transition-all ${
-            selectedSeason === '2025 invierno'
-              ? 'bg-sky-600 text-white border-sky-600 shadow-md ring-2 ring-sky-600/20'
-              : 'bg-white hover:bg-sky-50/50 border-slate-200 text-slate-900 shadow-2xs'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-1">
-            <span className={`text-[11px] font-bold uppercase tracking-wider ${selectedSeason === '2025 invierno' ? 'text-sky-100' : 'text-sky-700'}`}>
-              ❄️ 2025 Invierno
-            </span>
-            <span className="text-xs font-bold px-1.5 py-0.2 rounded bg-sky-100 text-sky-900 border border-sky-300">
-              M/L
-            </span>
-          </div>
-          <div className="text-xl font-bold">
-            {stats2025Invierno.total.toLocaleString('es-CL')}{' '}
-            <span className={`text-xs font-normal ${selectedSeason === '2025 invierno' ? 'text-sky-100' : 'text-slate-500'}`}>
-              unidades
-            </span>
-          </div>
-          <div className={`text-[10px] mt-0.5 font-medium ${selectedSeason === '2025 invierno' ? 'text-sky-200' : 'text-sky-700'}`}>
-            JAC: {stats2025Invierno.jac} | BBB: {stats2025Invierno.bbb}
-          </div>
-        </button>
-
-        {/* 2026 Invierno */}
-        <button
-          onClick={() => setSelectedSeason('2026 invierno')}
-          className={`text-left p-3.5 rounded-xl border transition-all ${
-            selectedSeason === '2026 invierno'
-              ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-600/20'
-              : 'bg-white hover:bg-indigo-50/50 border-slate-200 text-slate-900 shadow-2xs'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-1">
-            <span className={`text-[11px] font-bold uppercase tracking-wider ${selectedSeason === '2026 invierno' ? 'text-indigo-100' : 'text-indigo-700'}`}>
-              ❄️ 2026 Invierno
-            </span>
-            <span className="text-xs font-bold px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-900 border border-indigo-300">
-              M/L
-            </span>
-          </div>
-          <div className="text-xl font-bold">
-            {stats2026Invierno.total.toLocaleString('es-CL')}{' '}
-            <span className={`text-xs font-normal ${selectedSeason === '2026 invierno' ? 'text-indigo-100' : 'text-slate-500'}`}>
-              unidades
-            </span>
-          </div>
-          <div className={`text-[10px] mt-0.5 font-medium ${selectedSeason === '2026 invierno' ? 'text-indigo-200' : 'text-indigo-700'}`}>
-            JAC: {stats2026Invierno.jac} | BBB: {stats2026Invierno.bbb}
-          </div>
-        </button>
-      </div>
-
-      {/* View Switcher Bar (Matrix vs Itemized List) */}
-      <div className="flex items-center justify-between bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-        <div className="flex items-center gap-1">
+      {/* Minimalist Controls: Season Filter, Search, and Company */}
+      <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
+        {/* Season Tabs */}
+        <div className="flex items-center gap-1 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-none">
           <button
-            onClick={() => setViewMode('matrix')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'matrix'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+            onClick={() => setSelectedSeason('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
+              selectedSeason === 'all'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <Table className="w-3.5 h-3.5 text-amber-600" />
-            <span>Tablas por Temporada (Planilla Oficial JAC / BBB)</span>
-            <span className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded font-bold">
-              3 Temporadas
-            </span>
+            Todas las temporadas
           </button>
 
           <button
-            onClick={() => setViewMode('items')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'items'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+            onClick={() => setSelectedSeason('2025 verano')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+              selectedSeason === '2025 verano'
+                ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <LayoutGrid className="w-3.5 h-3.5 text-blue-600" />
-            <span>Listado Detallado por Ítem & Bodega</span>
-            <span className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded font-bold">
-              {inventory.length} ítems
-            </span>
+            <span>2025 Verano</span>
+            <span className="text-[10px] opacity-75 font-mono">({stats2025Verano.total})</span>
+          </button>
+
+          <button
+            onClick={() => setSelectedSeason('2025 invierno')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+              selectedSeason === '2025 invierno'
+                ? 'bg-sky-600 text-white font-bold shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <span>2025 Invierno</span>
+            <span className="text-[10px] opacity-75 font-mono">({stats2025Invierno.total})</span>
+          </button>
+
+          <button
+            onClick={() => setSelectedSeason('2026 invierno')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+              selectedSeason === '2026 invierno'
+                ? 'bg-indigo-600 text-white font-bold shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <span>2026 Invierno</span>
+            <span className="text-[10px] opacity-75 font-mono">({stats2026Invierno.total})</span>
           </button>
         </div>
 
-        <span className="text-[11px] text-slate-500 hidden md:inline px-2 font-medium">
-          {viewMode === 'matrix' ? 'Tablas separadas por 2025 Verano, 2025 Invierno y 2026 Invierno' : 'Vista de gestión individual'}
-        </span>
+        {/* Search, Filter & View Toggle */}
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="relative flex-1 md:w-56">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Buscar prenda..."
+              value={viewMode === 'matrix' ? matrixSearch : searchTerm}
+              onChange={(e) => {
+                if (viewMode === 'matrix') setMatrixSearch(e.target.value);
+                else setSearchTerm(e.target.value);
+              }}
+              className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
+            />
+          </div>
+
+          {viewMode === 'matrix' && (
+            <select
+              value={matrixCompanyFilter}
+              onChange={(e) => setMatrixCompanyFilter(e.target.value as any)}
+              className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none font-medium"
+            >
+              <option value="all">Empresas: Todas</option>
+              <option value="JAC">JAC</option>
+              <option value="BBB">Buses Bío Bío</option>
+              <option value="General">General / Pantalones</option>
+            </select>
+          )}
+
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+            <button
+              onClick={() => setViewMode('matrix')}
+              title="Vista de Tablas por Temporada"
+              className={`p-1.5 rounded-md transition-colors ${
+                viewMode === 'matrix' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Table className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode('items')}
+              title="Vista de Ítems Detallados"
+              className={`p-1.5 rounded-md transition-colors ${
+                viewMode === 'items' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* ======================================================== */}
       {/* MODE 1: MATRIX VIEW (Tablas por Temporada)                */}
       {/* ======================================================== */}
       {viewMode === 'matrix' && (
-        <div className="space-y-4">
-          {/* Season Switcher & Quick Filters Bar */}
-          <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            {/* Season Tabs Selector */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs font-bold text-slate-700 mr-1 flex items-center gap-1">
-                  <Layers className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Temporada:</span>
-                </span>
-
-                <button
-                  onClick={() => setSelectedSeason('all')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    selectedSeason === 'all'
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                  }`}
-                >
-                  <span>📑 Todas las Temporadas (Ver las 3 Tablas)</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 text-white font-mono">
-                    {matrixStats.grandTotal.toLocaleString('es-CL')}
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => setSelectedSeason('2025 verano')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    selectedSeason === '2025 verano'
-                      ? 'bg-amber-500 text-slate-950 shadow-xs'
-                      : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80'
-                  }`}
-                >
-                  <span>☀️ 2025 Verano</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-900/10 font-bold">
-                    {stats2025Verano.total.toLocaleString('es-CL')} un.
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => setSelectedSeason('2025 invierno')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    selectedSeason === '2025 invierno'
-                      ? 'bg-sky-600 text-white shadow-xs'
-                      : 'bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200/80'
-                  }`}
-                >
-                  <span>❄️ 2025 Invierno</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-900/10 font-bold">
-                    {stats2025Invierno.total.toLocaleString('es-CL')} un.
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => setSelectedSeason('2026 invierno')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    selectedSeason === '2026 invierno'
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200/80'
-                  }`}
-                >
-                  <span>❄️ 2026 Invierno</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-900/10 font-bold">
-                    {stats2026Invierno.total.toLocaleString('es-CL')} un.
-                  </span>
-                </button>
-              </div>
-
-              <div className="text-[11px] text-slate-500 font-medium hidden lg:inline">
-                {selectedSeason === 'all'
-                  ? 'Mostrando las 3 tablas simultáneas en pantalla'
-                  : `Visualizando tabla de ${selectedSeason}`}
-              </div>
-            </div>
-
-            {/* Matrix Search & Filters */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar prenda (Camisa, Sweater, Parka...)..."
-                  value={matrixSearch}
-                  onChange={(e) => setMatrixSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                <select
-                  value={matrixCompanyFilter}
-                  onChange={(e) => setMatrixCompanyFilter(e.target.value as any)}
-                  className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-semibold focus:outline-none"
-                >
-                  <option value="all">Empresas: Todas</option>
-                  <option value="JAC">Cía. JAC Transportes (JAC)</option>
-                  <option value="BBB">Buses Bío Bío (BBB)</option>
-                  <option value="General">Compartido / General</option>
-                </select>
-
-                <select
-                  value={matrixStorageFilter}
-                  onChange={(e) => setMatrixStorageFilter(e.target.value as any)}
-                  className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none"
-                >
-                  <option value="all">Ubicación: Caja y Repisa</option>
-                  <option value="Caja">Caja</option>
-                  <option value="Repisa">Repisa</option>
-                </select>
-
-                {(matrixSearch || matrixCompanyFilter !== 'all' || matrixStorageFilter !== 'all') && (
-                  <button
-                    onClick={() => {
-                      setMatrixSearch('');
-                      setMatrixCompanyFilter('all');
-                      setMatrixStorageFilter('all');
-                    }}
-                    className="text-xs text-rose-600 hover:text-rose-700 font-semibold px-2 py-1"
-                  >
-                    Limpiar Filtros
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
+        <div className="space-y-5">
           {/* Render individual Season Table Helper */}
           {(() => {
             const renderTable = (
               rows: MatrixRow[],
               seasonKey: '2025 verano' | '2025 invierno' | '2026 invierno',
               title: string,
-              subtitle: string,
-              icon: string,
-              theme: {
-                border: string;
-                headerBg: string;
-                headerText: string;
-                badgeBg: string;
-                badgeText: string;
-                badgeBorder: string;
-              },
               stats: { total: number; jac: number; bbb: number; general: number; count: number }
             ) => {
               return (
-                <div key={seasonKey} className={`bg-white rounded-2xl border ${theme.border} shadow-2xs overflow-hidden`}>
-                  {/* Season Header Banner */}
-                  <div className={`p-3.5 ${theme.headerBg} border-b ${theme.border} flex flex-col md:flex-row md:items-center justify-between gap-3`}>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{icon}</span>
-                        <h2 className={`text-sm sm:text-base font-bold font-display ${theme.headerText}`}>
-                          {title}
-                        </h2>
-                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${theme.badgeBg} ${theme.badgeText} ${theme.badgeBorder}`}>
-                          {stats.total.toLocaleString('es-CL')} Unidades en Bodega
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600 mt-0.5">
-                        {subtitle}
-                      </p>
+                <div key={seasonKey} className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+                  {/* Table Header: Clean & Minimalist */}
+                  <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <h2 className="text-sm font-bold text-slate-900">
+                        {title}
+                      </h2>
+                      <span className="text-[11px] font-medium text-slate-500">
+                        {rows.length} prendas · {stats.total.toLocaleString('es-CL')} unidades
+                      </span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="flex items-center gap-1.5 text-[11px] font-semibold bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-slate-200">
-                        <span className="text-amber-800">JAC: {stats.jac.toLocaleString('es-CL')}</span>
-                        <span className="text-slate-300">|</span>
-                        <span className="text-blue-800">BBB: {stats.bbb.toLocaleString('es-CL')}</span>
-                        {stats.general > 0 && (
-                          <>
-                            <span className="text-slate-300">|</span>
-                            <span className="text-slate-700">Pantalones: {stats.general.toLocaleString('es-CL')}</span>
-                          </>
-                        )}
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={matrixCompanyFilter}
+                        onChange={(e) => setMatrixCompanyFilter(e.target.value as any)}
+                        className="px-2.5 py-1 text-xs bg-white border border-slate-200 rounded-md text-slate-700 font-medium focus:outline-none cursor-pointer"
+                        title="Filtrar por empresa"
+                      >
+                        <option value="all">Empresas: Todas</option>
+                        <option value="JAC">JAC ({stats.jac} un.)</option>
+                        <option value="BBB">Buses Bío Bío ({stats.bbb} un.)</option>
+                        <option value="General">General ({stats.general} un.)</option>
+                      </select>
 
                       <button
                         onClick={() => handleExportMatrixCSV(seasonKey)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-lg text-xs font-bold transition-all shadow-2xs"
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md text-xs font-medium transition-colors"
                       >
-                        <Download className="w-3.5 h-3.5 text-slate-600" />
-                        <span>Descargar CSV ({title})</span>
+                        <Download className="w-3.5 h-3.5 text-slate-500" />
+                        <span>CSV</span>
                       </button>
                     </div>
                   </div>
@@ -796,7 +627,7 @@ export const InventoryView: React.FC = () => {
                         {rows.length === 0 ? (
                           <tr>
                             <td colSpan={28} className="py-8 text-center text-slate-400 font-sans">
-                              No se encontraron registros para {title} con los filtros seleccionados.
+                              No hay registros con los filtros seleccionados.
                             </td>
                           </tr>
                         ) : (
@@ -806,7 +637,7 @@ export const InventoryView: React.FC = () => {
                             const isCaja = row.storageType.toLowerCase() === 'caja';
 
                             return (
-                              <tr key={row.id} className="hover:bg-amber-50/30 transition-colors">
+                              <tr key={row.id} className="hover:bg-amber-50/20 transition-colors">
                                 <td className="py-2 px-3 whitespace-nowrap font-sans font-bold">
                                   {isJac && (
                                     <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200">
@@ -837,7 +668,7 @@ export const InventoryView: React.FC = () => {
                                   </span>
                                 </td>
 
-                                <td className="py-2 px-4 whitespace-nowrap font-sans font-bold text-slate-900">
+                                <td className="py-2 px-4 whitespace-nowrap font-sans font-semibold text-slate-900">
                                   {row.garmentName}
                                 </td>
 
@@ -889,43 +720,13 @@ export const InventoryView: React.FC = () => {
               );
             };
 
-            const themeVerano = {
-              border: 'border-amber-300',
-              headerBg: 'bg-gradient-to-r from-amber-100/90 via-amber-50 to-orange-50/60',
-              headerText: 'text-amber-950',
-              badgeBg: 'bg-amber-200',
-              badgeText: 'text-amber-950',
-              badgeBorder: 'border-amber-300',
-            };
-
-            const themeInvierno2025 = {
-              border: 'border-sky-300',
-              headerBg: 'bg-gradient-to-r from-sky-100/90 via-sky-50 to-blue-50/60',
-              headerText: 'text-sky-950',
-              badgeBg: 'bg-sky-200',
-              badgeText: 'text-sky-950',
-              badgeBorder: 'border-sky-300',
-            };
-
-            const themeInvierno2026 = {
-              border: 'border-indigo-300',
-              headerBg: 'bg-gradient-to-r from-indigo-100/90 via-indigo-50 to-purple-50/60',
-              headerText: 'text-indigo-950',
-              badgeBg: 'bg-indigo-200',
-              badgeText: 'text-indigo-950',
-              badgeBorder: 'border-indigo-300',
-            };
-
             return (
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {(selectedSeason === 'all' || selectedSeason === '2025 verano') &&
                   renderTable(
                     matrix2025Verano,
                     '2025 verano',
-                    'Temporada 2025 Verano',
-                    'Dotación estival: Camisas y blusas manga corta (M/C), sweaters ligeros y pantalones oficiales',
-                    '☀️',
-                    themeVerano,
+                    '2025 Verano',
                     stats2025Verano
                   )}
 
@@ -933,10 +734,7 @@ export const InventoryView: React.FC = () => {
                   renderTable(
                     matrix2025Invierno,
                     '2025 invierno',
-                    'Temporada 2025 Invierno',
-                    'Dotación invernal histórica: Manga larga (M/L), parkas impermeables, polares térmicos y pantalones',
-                    '❄️',
-                    themeInvierno2025,
+                    '2025 Invierno',
                     stats2025Invierno
                   )}
 
@@ -944,10 +742,7 @@ export const InventoryView: React.FC = () => {
                   renderTable(
                     matrix2026Invierno,
                     '2026 invierno',
-                    'Temporada 2026 Invierno',
-                    'Dotación invernal vigente: Camisas M/L, polares, parkas unisex, sweaters de abrigo y pantalones',
-                    '❄️',
-                    themeInvierno2026,
+                    '2026 Invierno',
                     stats2026Invierno
                   )}
               </div>

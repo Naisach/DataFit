@@ -2,13 +2,12 @@ import React, { useState } from 'react';
 import { UniformsProvider, useUniforms } from './context/UniformsContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
+import { LoginPage } from './components/LoginPage';
 import { InventoryView } from './components/InventoryView';
 import { EmployeesView } from './components/EmployeesView';
 import { ProcurementPlanView } from './components/ProcurementPlanView';
 import { MovementsView } from './components/MovementsView';
 import { DeliveryModal } from './components/DeliveryModal';
-import { AuthModal } from './components/AuthModal';
-import { ProtectedViewGuard } from './components/ProtectedViewGuard';
 import { Employee } from './types';
 
 function MainContent() {
@@ -22,51 +21,12 @@ function MainContent() {
     setIsDeliveryModalOpen(true);
   };
 
-  const renderCurrentView = () => {
-    // If user is not authenticated as a registered user, show the protected view guard
-    if (!isAuthenticated) {
-      switch (activeView) {
-        case 'inventory':
-        case 'dashboard':
-          return (
-            <ProtectedViewGuard
-              moduleName="Inventario a Tiempo Real"
-              moduleDescription="Existencias físicas en bodega, niveles de stock, SKU y ajustes de inventario"
-            />
-          );
-        case 'employees':
-          return (
-            <ProtectedViewGuard
-              moduleName="Registros de Trabajadores"
-              moduleDescription="Nómina de colaboradores, tallas registradas, asignación de dotación y firmas"
-            />
-          );
-        case 'procurement':
-          return (
-            <ProtectedViewGuard
-              moduleName="Planificación de Compra"
-              moduleDescription="Demanda de temporada, cruce de bodega, cálculo de compra neta y presupuestos"
-            />
-          );
-        case 'movements':
-        case 'deliveries':
-          return (
-            <ProtectedViewGuard
-              moduleName="Registro de Ingresos y Entregas"
-              moduleDescription="Libro auditable de ingresos a bodega, entregas a trabajadores y ajustes de stock"
-            />
-          );
-        default:
-          return (
-            <ProtectedViewGuard
-              moduleName="Sistema de Gestión y Control"
-              moduleDescription="Datos operativos de inventario, dotación y compras"
-            />
-          );
-      }
-    }
+  // Si no ha iniciado sesión, mostrar única y exclusivamente el menú de inicio de sesión
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
-    // Authenticated users have full view and edit capabilities
+  const renderCurrentView = () => {
     switch (activeView) {
       case 'inventory':
       case 'dashboard':
@@ -91,11 +51,8 @@ function MainContent() {
         {renderCurrentView()}
       </main>
 
-      {/* Global Auth Modal for login and registration */}
-      <AuthModal />
-
       {/* Direct Delivery Modal invoked from Employee row */}
-      {isDeliveryModalOpen && isAuthenticated && (
+      {isDeliveryModalOpen && (
         <DeliveryModal
           isOpen={isDeliveryModalOpen}
           onClose={() => {
@@ -107,14 +64,10 @@ function MainContent() {
       )}
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white/80 py-4 px-6 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>
-            Sistema de Inventario en Tiempo Real, Control de Dotación y Registro de Ingresos/Entregas
-          </p>
-          <p className="text-[11px] text-slate-400">
-            Control de Acceso: Visualización y Edición Restringida a Personal Registrado
-          </p>
+      <footer className="border-t border-slate-200 bg-white/60 py-3 px-6 text-center text-xs text-slate-400">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <span>DataFit · Control de Uniformes y Dotación</span>
+          <span>JAC Transportes & Buses Bío Bío</span>
         </div>
       </footer>
     </div>

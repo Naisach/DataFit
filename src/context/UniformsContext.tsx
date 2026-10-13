@@ -50,6 +50,7 @@ interface UniformsContextType {
     unitCostCLP?: number;
     location?: string;
     notes?: string;
+    company?: string;
   }) => void;
   addStockEntrega: (data: {
     itemId?: string;
@@ -63,6 +64,7 @@ interface UniformsContextType {
     responsible: string;
     notes?: string;
     signature?: string;
+    company?: string;
   }) => void;
   adjustStock: (id: string, newStock: number, reason: string, responsible: string) => void;
   updateInventoryItem: (id: string, updates: Partial<InventoryItem>) => void;
@@ -318,6 +320,7 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     unitCostCLP?: number;
     location?: string;
     notes?: string;
+    company?: string;
   }) => {
     const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
     const codeNum = movements.filter((m) => m.type === 'ingreso').length + 47;
@@ -380,6 +383,14 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       party: data.supplier,
       responsible: data.responsible,
       notes: data.notes,
+      company:
+        data.company ||
+        (data.itemId ? inventory.find((i) => i.id === data.itemId)?.company : undefined) ||
+        (data.garmentName.toUpperCase().includes('JAC')
+          ? 'JAC'
+          : data.garmentName.toUpperCase().includes('BÍO') || data.garmentName.toUpperCase().includes('BBB')
+          ? 'BBB'
+          : 'General'),
     };
 
     setMovements((prev) => [newMovement, ...prev]);
@@ -398,6 +409,7 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     responsible: string;
     notes?: string;
     signature?: string;
+    company?: string;
   }) => {
     const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
     const codeNum = movements.filter((m) => m.type === 'entrega').length + 99;
@@ -423,6 +435,18 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
 
     // 2. Add Movement
+    const empMatch = data.employeeId ? employees.find((e) => e.id === data.employeeId) : undefined;
+    const itemMatch = data.itemId ? inventory.find((i) => i.id === data.itemId) : undefined;
+    const resolvedCompany =
+      data.company ||
+      empMatch?.company ||
+      itemMatch?.company ||
+      (data.garmentName.toUpperCase().includes('JAC')
+        ? 'JAC'
+        : data.garmentName.toUpperCase().includes('BÍO') || data.garmentName.toUpperCase().includes('BBB')
+        ? 'BBB'
+        : 'General');
+
     const newMovement: StockMovement = {
       id: `mov-${Date.now()}`,
       code: movCode,
@@ -438,6 +462,7 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       responsible: data.responsible,
       notes: data.notes,
       signature: data.signature,
+      company: resolvedCompany,
     };
     setMovements((prev) => [newMovement, ...prev]);
 
