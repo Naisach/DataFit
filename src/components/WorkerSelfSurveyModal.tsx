@@ -310,7 +310,7 @@ export const WorkerSelfSurveyModal: React.FC = () => {
 
               {activeGuide === 'pants' && (
                 <p className="text-[11px] text-slate-600 leading-relaxed bg-white p-2.5 rounded-lg border border-slate-200">
-                  👖 <strong>Pantalón Cargo:</strong> Corresponde a tu talla habitual de jeans nacional (38 al 54). Si dudas entre dos tallas, prefiere la mayor para faena cómoda.
+                  👖 <strong>Pantalón Institucional:</strong> Corresponde a tu talla habitual de pantalón nacional (38 al 54). Si dudas entre dos tallas, prefiere la mayor para faena cómoda.
                 </p>
               )}
 

@@ -349,18 +349,18 @@ export const DashboardView: React.FC = () => {
           <div className="space-y-2.5 text-xs">
             <div className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-200/60 flex items-center justify-between">
               <div>
-                <span className="font-semibold text-amber-950">Polera Dry-Fit Protección Solar UV+50</span>
-                <p className="text-[11px] text-amber-800">2 unidades por temporero • Confección transpirable</p>
+                <span className="font-semibold text-amber-950">Camisa hombre M/C</span>
+                <p className="text-[11px] text-amber-800">Dotación estival y permanente • Confección corporativa</p>
               </div>
               <span className="text-amber-900 font-bold bg-white px-2 py-1 rounded shadow-2xs">
-                Lead Time: 35 d
+                Lead Time: 30 d
               </span>
             </div>
 
             <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-between">
               <div>
-                <span className="font-semibold text-slate-800">Pantalón Cargo Ripstop Liviano</span>
-                <p className="text-[11px] text-slate-500">2 unidades por temporero • Anti-desgarro para faena</p>
+                <span className="font-semibold text-slate-800">Pantalón hombre</span>
+                <p className="text-[11px] text-slate-500">Dotación oficial de faena y ruta</p>
               </div>
               <span className="text-slate-800 font-bold bg-white px-2 py-1 rounded border border-slate-200">
                 Lead Time: 45 d
@@ -369,11 +369,11 @@ export const DashboardView: React.FC = () => {
 
             <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-between">
               <div>
-                <span className="font-semibold text-slate-800">Jockey Legionario con Cubrenuca</span>
-                <p className="text-[11px] text-slate-500">Obligatorio por ley de radiación UV en terreno</p>
+                <span className="font-semibold text-slate-800">Sweater unisex M/C</span>
+                <p className="text-[11px] text-slate-500">Prenda institucional oficial</p>
               </div>
               <span className="text-slate-800 font-bold bg-white px-2 py-1 rounded border border-slate-200">
-                Lead Time: 20 d
+                Lead Time: 35 d
               </span>
             </div>
           </div>

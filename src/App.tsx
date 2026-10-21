@@ -14,10 +14,12 @@ function MainContent() {
   const { activeView } = useUniforms();
   const { isAuthenticated } = useAuth();
   const [deliveryTargetEmployee, setDeliveryTargetEmployee] = useState<Employee | null>(null);
+  const [deliveryInitialKitType, setDeliveryInitialKitType] = useState<'estival' | 'permanente' | 'reposicion'>('estival');
   const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
 
-  const handleOpenDeliveryForEmployee = (employee: Employee) => {
+  const handleOpenDeliveryForEmployee = (employee: Employee, kitType?: 'estival' | 'permanente' | 'reposicion') => {
     setDeliveryTargetEmployee(employee);
+    setDeliveryInitialKitType(kitType || (employee.type === 'estival' ? 'estival' : 'permanente'));
     setIsDeliveryModalOpen(true);
   };
 
@@ -60,6 +62,7 @@ function MainContent() {
             setDeliveryTargetEmployee(null);
           }}
           preselectedEmployee={deliveryTargetEmployee}
+          initialKitType={deliveryInitialKitType}
         />
       )}
 

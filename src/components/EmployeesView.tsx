@@ -25,7 +25,7 @@ import {
 import { exportEmployeesToDrive } from '../services/googleDriveService';
 
 interface EmployeesViewProps {
-  onOpenDeliveryForEmployee?: (employee: Employee) => void;
+  onOpenDeliveryForEmployee?: (employee: Employee, kitType?: 'estival' | 'permanente' | 'reposicion') => void;
 }
 
 export const EmployeesView: React.FC<EmployeesViewProps> = ({ onOpenDeliveryForEmployee }) => {
@@ -601,14 +601,24 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({ onOpenDeliveryForE
                       <td className="py-2.5 px-3 text-right">
                         <div className="flex items-center justify-end gap-1">
                           {onOpenDeliveryForEmployee && (
-                            <button
-                              onClick={() => onOpenDeliveryForEmployee(emp)}
-                              title="Entregar dotación a trabajador"
-                              className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-md font-semibold text-[11px] flex items-center gap-1 border border-amber-200 transition-colors"
-                            >
-                              <PackageCheck className="w-3.5 h-3.5 text-amber-700" />
-                              <span className="hidden lg:inline">Entregar</span>
-                            </button>
+                            <>
+                              <button
+                                onClick={() => onOpenDeliveryForEmployee(emp)}
+                                title="Entregar dotación a trabajador"
+                                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-md font-semibold text-[11px] flex items-center gap-1 border border-amber-200 transition-colors"
+                              >
+                                <PackageCheck className="w-3.5 h-3.5 text-amber-700" />
+                                <span className="hidden xl:inline">Entregar</span>
+                              </button>
+                              <button
+                                onClick={() => onOpenDeliveryForEmployee(emp, 'reposicion')}
+                                title="Reposición o cambio de prenda individual (devolución e ingreso/entrega)"
+                                className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-md font-semibold text-[11px] flex items-center gap-1 border border-blue-200 transition-colors"
+                              >
+                                <RefreshCw className="w-3 h-3 text-blue-700" />
+                                <span className="hidden xl:inline">Cambio</span>
+                              </button>
+                            </>
                           )}
 
                           <button
