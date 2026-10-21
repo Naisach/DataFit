@@ -26,6 +26,24 @@ export const DeliveryModal: React.FC<DeliveryModalProps> = ({
   // Active employee object
   const currentEmp = employees.find((e) => e.id === selectedEmployeeId) || preselectedEmployee;
 
+  const isFemale = currentEmp
+    ? currentEmp.gender?.toLowerCase().includes('mujer') ||
+      currentEmp.genderFit === 'femenino' ||
+      Boolean(currentEmp.sizes?.blusa && !currentEmp.sizes?.camisa)
+    : false;
+
+  const shirtOrBlusaSize = currentEmp
+    ? (isFemale ? (currentEmp.sizes?.blusa || currentEmp.sizes?.shirt) : (currentEmp.sizes?.camisa || currentEmp.sizes?.shirt)) || 'L'
+    : 'L';
+  const pantsSize = currentEmp?.sizes?.pants || '46';
+  const parkaSize = currentEmp?.sizes?.parka || currentEmp?.sizes?.jacket || 'L';
+  const polarSize = currentEmp?.sizes?.polar || currentEmp?.sizes?.jacket || 'L';
+  const sweaterSize = currentEmp?.sizes?.sweater || currentEmp?.sizes?.shirt || 'L';
+  const hasCorbata = currentEmp?.sizes?.corbata
+    ? currentEmp.sizes.corbata.toLowerCase().includes('si') ||
+      (currentEmp.sizes.corbata.toLowerCase().includes('aplica') && !currentEmp.sizes.corbata.toLowerCase().includes('no'))
+    : false;
+
   useEffect(() => {
     if (preselectedEmployee) {
       setSelectedEmployeeId(preselectedEmployee.id);
@@ -36,32 +54,91 @@ export const DeliveryModal: React.FC<DeliveryModalProps> = ({
     }
   }, [preselectedEmployee, employees, isOpen]);
 
-  // Update kit items based on selected employee sizes and kit type
+  // Update kit items based on selected employee sizes and kit type, using REAL inventory garments
   const items: DeliveryItem[] = React.useMemo(() => {
     if (!currentEmp) return [];
 
     if (kitType === 'estival') {
       return [
-        { id: 'item-1', name: 'Polera Dry-Fit Protección UV +50', size: currentEmp.sizes.shirt, quantity: 2, delivered: true },
-        { id: 'item-2', name: 'Pantalón Cargo Ripstop Liviano', size: currentEmp.sizes.pants, quantity: 2, delivered: true },
-        { id: 'item-3', name: 'Zapato de Seguridad Liviano', size: currentEmp.sizes.footwear, quantity: 1, delivered: true },
-        { id: 'item-4', name: 'Jockey Legionario Cubrenuca UV', size: currentEmp.sizes.headwear, quantity: 1, delivered: true },
+        {
+          id: 'item-estival-top',
+          name: isFemale ? 'Blusa mujer M/C' : 'Camisa hombre M/C',
+          size: shirtOrBlusaSize,
+          quantity: 1,
+          delivered: true,
+        },
+        {
+          id: 'item-estival-pants',
+          name: isFemale ? 'Pantalón mujer' : 'Pantalón hombre',
+          size: pantsSize,
+          quantity: 1,
+          delivered: true,
+        },
       ];
     } else if (kitType === 'permanente') {
-      return [
-        { id: 'item-1', name: 'Camisa Institucional / Polera Piqué', size: currentEmp.sizes.shirt, quantity: 3, delivered: true },
-        { id: 'item-2', name: 'Pantalón Cargo Reforzado', size: currentEmp.sizes.pants, quantity: 2, delivered: true },
-        { id: 'item-3', name: 'Chaqueta Softshell Térmica', size: currentEmp.sizes.jacket, quantity: 1, delivered: true },
-        { id: 'item-4', name: 'Zapato de Seguridad Dieléctrico', size: currentEmp.sizes.footwear, quantity: 1, delivered: true },
-        { id: 'item-5', name: 'Jockey Institucional', size: currentEmp.sizes.headwear, quantity: 1, delivered: true },
+      const permanentItems: DeliveryItem[] = [
+        {
+          id: 'item-perm-top',
+          name: isFemale ? 'Blusa mujer M/L' : 'Camisa hombre M/L',
+          size: shirtOrBlusaSize,
+          quantity: 1,
+          delivered: true,
+        },
+        {
+          id: 'item-perm-pants',
+          name: isFemale ? 'Pantalón mujer' : 'Pantalón hombre',
+          size: pantsSize,
+          quantity: 1,
+          delivered: true,
+        },
+        {
+          id: 'item-perm-parka',
+          name: 'Parka unisex',
+          size: parkaSize,
+          quantity: 1,
+          delivered: true,
+        },
+        {
+          id: 'item-perm-polar',
+          name: isFemale ? 'Polar mujer' : 'Polar hombre',
+          size: polarSize,
+          quantity: 1,
+          delivered: true,
+        },
+        {
+          id: 'item-perm-sweater',
+          name: 'Sweater unisex M/L',
+          size: sweaterSize,
+          quantity: 1,
+          delivered: true,
+        },
       ];
+
+      if (hasCorbata) {
+        permanentItems.push({
+          id: 'item-perm-tie',
+          name: 'Corbata',
+          size: 'Estándar',
+          quantity: 1,
+          delivered: true,
+        });
+      }
+
+      return permanentItems;
     } else {
       // Reposición / Cambio
       return [
-        { id: 'item-rep-1', name: 'Pantalón Cargo Recambio', size: currentEmp.sizes.pants, quantity: 1, delivered: true, notes: 'Ajuste de talla' },
+        {
+          id: 'item-rep-1',
+          name: isFemale ? 'Blusa mujer M/C' : 'Camisa hombre M/C',
+          size: shirtOrBlusaSize,
+          quantity: 1,
+          delivered: true,
+          notes: 'Ajuste / Reposición',
+        },
       ];
     }
-  }, [currentEmp, kitType]);
+  }, [currentEmp, kitType, isFemale, shirtOrBlusaSize, pantsSize, parkaSize, polarSize, sweaterSize, hasCorbata]);
 
   if (!isOpen) return null;
 
@@ -70,9 +147,9 @@ export const DeliveryModal: React.FC<DeliveryModalProps> = ({
     if (!currentEmp) return;
 
     const kitTitleMap = {
-      estival: 'Kit Estival 2026-2027 (Protección UV)',
-      permanente: 'Kit Planta Permanente 2026',
-      reposicion: 'Kit Reposición y Cambio de Talla',
+      estival: 'Kit Estival (Camisa/Blusa M/C + Pantalón)',
+      permanente: `Kit Planta Permanente (M/L, Pantalón, Parka, Polar, Sweater${items.some((i) => i.name === 'Corbata') ? ', Corbata' : ''})`,
+      reposicion: 'Kit Reposición y Cambio de Prenda',
     };
 
     addDelivery({
@@ -96,13 +173,11 @@ export const DeliveryModal: React.FC<DeliveryModalProps> = ({
     if (status === 'entregada') {
       items.forEach((item) => {
         if (item.delivered) {
-          const cat = item.name.toLowerCase().includes('zapato')
-            ? 'calzado'
-            : item.name.toLowerCase().includes('pantalón')
+          const cat = item.name.toLowerCase().includes('pantalón')
             ? 'inferior'
-            : item.name.toLowerCase().includes('chaqueta') || item.name.toLowerCase().includes('softshell')
+            : item.name.toLowerCase().includes('parka') || item.name.toLowerCase().includes('polar') || item.name.toLowerCase().includes('sweater')
             ? 'abrigo'
-            : item.name.toLowerCase().includes('jockey')
+            : item.name.toLowerCase().includes('corbata')
             ? 'proteccion'
             : 'superior';
 
@@ -116,7 +191,7 @@ export const DeliveryModal: React.FC<DeliveryModalProps> = ({
             employeeName: `${currentEmp.fullName} (RUT ${currentEmp.rut})`,
             responsible: dispatcherName,
             notes: `Entrega de dotación ${kitTitleMap[kitType]}`,
-            signature: 'Firma digital registrada conforme',
+            company: currentEmp.company,
           });
         }
       });
@@ -185,9 +260,9 @@ export const DeliveryModal: React.FC<DeliveryModalProps> = ({
                 onChange={(e) => setKitType(e.target.value as any)}
                 className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
               >
-                <option value="estival">Kit Estival (Polera UV, Cargo Liviano, Calzado, Legionario)</option>
-                <option value="permanente">Kit Planta Permanente (Camisas, Cargo, Softshell, Calzado)</option>
-                <option value="reposicion">Reposición / Cambio de Talla</option>
+                <option value="estival">Kit Estival (Camisa/Blusa M/C + Pantalón)</option>
+                <option value="permanente">Kit Planta Permanente (Camisa/Blusa M/L, Pantalón, Parka, Polar, Sweater, Corbata)</option>
+                <option value="reposicion">Reposición / Cambio de Prenda Individual</option>
               </select>
             </div>
           </div>
@@ -198,19 +273,34 @@ export const DeliveryModal: React.FC<DeliveryModalProps> = ({
               <div>
                 <span className="font-bold text-slate-900">{currentEmp.fullName}</span>
                 <p className="text-slate-500 text-[11px]">
-                  {currentEmp.workLocation} • {currentEmp.department}
+                  {currentEmp.workLocation} • {currentEmp.department} • <span className="font-semibold text-slate-700">{isFemale ? 'Femenino' : 'Masculino'}</span>
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="bg-white px-2 py-1 rounded border border-slate-200 font-mono text-[11px]">
-                  Polera: <strong>{currentEmp.sizes.shirt}</strong>
+                  {isFemale ? 'Blusa' : 'Camisa'}: <strong>{shirtOrBlusaSize}</strong>
                 </span>
                 <span className="bg-white px-2 py-1 rounded border border-slate-200 font-mono text-[11px]">
-                  Pantalón: <strong>{currentEmp.sizes.pants}</strong>
+                  Pantalón: <strong>{pantsSize}</strong>
                 </span>
-                <span className="bg-white px-2 py-1 rounded border border-slate-200 font-mono text-[11px]">
-                  Calzado: <strong>{currentEmp.sizes.footwear}</strong>
-                </span>
+                {kitType === 'permanente' && (
+                  <>
+                    <span className="bg-white px-2 py-1 rounded border border-slate-200 font-mono text-[11px]">
+                      Parka: <strong>{parkaSize}</strong>
+                    </span>
+                    <span className="bg-white px-2 py-1 rounded border border-slate-200 font-mono text-[11px]">
+                      Polar: <strong>{polarSize}</strong>
+                    </span>
+                    <span className="bg-white px-2 py-1 rounded border border-slate-200 font-mono text-[11px]">
+                      Sweater: <strong>{sweaterSize}</strong>
+                    </span>
+                    {hasCorbata && (
+                      <span className="bg-amber-50 text-amber-900 px-2 py-1 rounded border border-amber-200 font-mono text-[11px]">
+                        Corbata: <strong>Aplica</strong>
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           )}
