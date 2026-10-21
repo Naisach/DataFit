@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useUniforms } from '../context/UniformsContext';
 import { InventoryItem, MatrixRow } from '../types';
 import { BulkImportModal } from './BulkImportModal';
+import { InventoryDashboardCharts } from './InventoryDashboardCharts';
 import { SIZE_COLUMNS } from '../services/csvParserService';
 import {
   Boxes,
@@ -85,9 +86,55 @@ export const InventoryView: React.FC = () => {
     return '2026 invierno';
   };
 
+  // Synchronized Matrix: update sizes & totals from inventory items so matrix matches real physical stock
+  const syncedMatrix = useMemo(() => {
+    if (!inventory || inventory.length === 0) return inventoryMatrix;
+
+    const stockMap = new Map<string, number>();
+    for (const item of inventory) {
+      const s = item.season
+        ? item.season.toLowerCase()
+        : item.name.toLowerCase().includes('m/c')
+        ? '2025 verano'
+        : '2026 invierno';
+      const key = `${(item.name || '').trim().toLowerCase()}|${(item.company || 'General').trim().toLowerCase()}|${(item.storageType || 'Caja').trim().toLowerCase()}|${s}|${(item.size || '').trim().toUpperCase()}`;
+      stockMap.set(key, (stockMap.get(key) || 0) + item.currentStock);
+    }
+
+    return inventoryMatrix.map((row) => {
+      let rowTotal = 0;
+      let changed = false;
+      const s = getRowSeason(row);
+      const updatedSizes: Record<string, number> = {};
+
+      for (const [sizeKey, currentVal] of Object.entries(row.sizes)) {
+        const key = `${(row.garmentName || '').trim().toLowerCase()}|${(row.company || 'General').trim().toLowerCase()}|${(row.storageType || 'Caja').trim().toLowerCase()}|${s}|${sizeKey.trim().toUpperCase()}`;
+        if (stockMap.has(key)) {
+          const realVal = stockMap.get(key)!;
+          updatedSizes[sizeKey] = realVal;
+          rowTotal += realVal;
+          if (realVal !== currentVal) changed = true;
+        } else {
+          updatedSizes[sizeKey] = currentVal;
+          rowTotal += currentVal;
+        }
+      }
+
+      if (!changed && rowTotal === row.total) {
+        return row;
+      }
+
+      return {
+        ...row,
+        sizes: updatedSizes,
+        total: rowTotal,
+      };
+    });
+  }, [inventoryMatrix, inventory]);
+
   // Filtered Matrix Rows (global query and company/storage filter applied)
   const filteredMatrix = useMemo(() => {
-    return inventoryMatrix.filter((row) => {
+    return syncedMatrix.filter((row) => {
       const q = matrixSearch.toLowerCase();
       const matchesSearch =
         row.garmentName.toLowerCase().includes(q) ||
@@ -106,7 +153,7 @@ export const InventoryView: React.FC = () => {
 
       return matchesSearch && matchesCompany && matchesStorage;
     });
-  }, [inventoryMatrix, matrixSearch, matrixCompanyFilter, matrixStorageFilter]);
+  }, [syncedMatrix, matrixSearch, matrixCompanyFilter, matrixStorageFilter]);
 
   // Rows partitioned by season
   const matrix2025Verano = useMemo(() => {
@@ -137,16 +184,16 @@ export const InventoryView: React.FC = () => {
   };
 
   const stats2025Verano = useMemo(() => {
-    return calculateSeasonStats(inventoryMatrix.filter((r) => getRowSeason(r) === '2025 verano'));
-  }, [inventoryMatrix]);
+    return calculateSeasonStats(syncedMatrix.filter((r) => getRowSeason(r) === '2025 verano'));
+  }, [syncedMatrix]);
 
   const stats2025Invierno = useMemo(() => {
-    return calculateSeasonStats(inventoryMatrix.filter((r) => getRowSeason(r) === '2025 invierno'));
-  }, [inventoryMatrix]);
+    return calculateSeasonStats(syncedMatrix.filter((r) => getRowSeason(r) === '2025 invierno'));
+  }, [syncedMatrix]);
 
   const stats2026Invierno = useMemo(() => {
-    return calculateSeasonStats(inventoryMatrix.filter((r) => getRowSeason(r) === '2026 invierno'));
-  }, [inventoryMatrix]);
+    return calculateSeasonStats(syncedMatrix.filter((r) => getRowSeason(r) === '2026 invierno'));
+  }, [syncedMatrix]);
 
   // Overall Matrix Totals
   const matrixStats = useMemo(() => {
@@ -155,15 +202,15 @@ export const InventoryView: React.FC = () => {
     let generalTotal = 0;
     let grandTotal = 0;
 
-    inventoryMatrix.forEach((r) => {
+    syncedMatrix.forEach((r) => {
       grandTotal += r.total;
       if (r.company === 'JAC') jacTotal += r.total;
       else if (r.company === 'BBB') bbbTotal += r.total;
       else generalTotal += r.total;
     });
 
-    return { jacTotal, bbbTotal, generalTotal, grandTotal };
-  }, [inventoryMatrix]);
+    return { jacTotal, bbbTotal, generalTotal, grandTotal: totalStockUnits || grandTotal };
+  }, [syncedMatrix, totalStockUnits]);
 
   // Filtered Detailed Items
   const filteredInventory = useMemo(() => {
@@ -416,7 +463,7 @@ export const InventoryView: React.FC = () => {
             Inventario
           </h1>
           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-            {matrixStats.grandTotal.toLocaleString('es-CL')} unidades
+            {(totalStockUnits || matrixStats.grandTotal).toLocaleString('es-CL')} unidades
           </span>
         </div>
 
@@ -446,6 +493,13 @@ export const InventoryView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Analytics Dashboard: Top Stock Garments & Most Repeated Worker Sizes */}
+      <InventoryDashboardCharts
+        inventory={inventory}
+        employees={employees}
+        totalStockUnits={totalStockUnits}
+      />
 
       {/* Minimalist Controls: Season Filter, Search, and Company */}
       <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">

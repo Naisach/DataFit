@@ -99,7 +99,7 @@ export const Navbar: React.FC = () => {
                   ? 'bg-white/20 text-white'
                   : 'bg-slate-200 text-slate-600'
               }`}>
-                {totalStockUnits}
+                {totalStockUnits.toLocaleString('es-CL')}
               </span>
             )}
           </button>

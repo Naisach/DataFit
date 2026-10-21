@@ -296,6 +296,29 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     setMovements((prev) => [newMovement, ...prev]);
+
+    // 3. Update inventoryMatrix row
+    setInventoryMatrix((prev) => {
+      const gLow = data.garmentName.toLowerCase();
+      const season = gLow.includes('m/c') ? '2025 verano' : '2026 invierno';
+      const company = data.company || (data.garmentName.toUpperCase().includes('JAC') ? 'JAC' : data.garmentName.toUpperCase().includes('BBB') ? 'BBB' : 'General');
+      const idx = prev.findIndex((r) =>
+        r.garmentName.toLowerCase() === gLow &&
+        r.company.toLowerCase() === company.toLowerCase() &&
+        (r.season || '').toLowerCase() === season
+      );
+      if (idx >= 0) {
+        const next = [...prev];
+        const row = { ...next[idx] };
+        const sizes = { ...row.sizes };
+        sizes[data.size] = (sizes[data.size] || 0) + data.quantity;
+        row.sizes = sizes;
+        row.total = Object.values(sizes).reduce((a, b) => a + Number(b || 0), 0);
+        next[idx] = row;
+        return next;
+      }
+      return prev;
+    });
   };
 
   // Real-Time Action: Registrar Entrega a Trabajador (Despacho / Salida)
@@ -375,6 +398,29 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         lastDeliveryDate: nowStr.split(' ')[0],
       });
     }
+
+    // 4. Update inventoryMatrix row
+    setInventoryMatrix((prev) => {
+      const gLow = data.garmentName.toLowerCase();
+      const season = gLow.includes('m/c') ? '2025 verano' : '2026 invierno';
+      const company = resolvedCompany;
+      const idx = prev.findIndex((r) =>
+        r.garmentName.toLowerCase() === gLow &&
+        r.company.toLowerCase() === company.toLowerCase() &&
+        (r.season || '').toLowerCase() === season
+      );
+      if (idx >= 0) {
+        const next = [...prev];
+        const row = { ...next[idx] };
+        const sizes = { ...row.sizes };
+        sizes[data.size] = Math.max(0, (sizes[data.size] || 0) - data.quantity);
+        row.sizes = sizes;
+        row.total = Object.values(sizes).reduce((a, b) => a + Number(b || 0), 0);
+        next[idx] = row;
+        return next;
+      }
+      return prev;
+    });
   };
 
   // Real-Time Action: Ajuste manual de stock
@@ -389,6 +435,30 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setInventory((prev) =>
       prev.map((item) => (item.id === id ? { ...item, currentStock: Math.max(0, newStock), lastUpdated: nowStr } : item))
     );
+
+    setInventoryMatrix((prev) => {
+      const gLow = targetItem.name.toLowerCase();
+      const season = targetItem.season ? targetItem.season.toLowerCase() : (gLow.includes('m/c') ? '2025 verano' : '2026 invierno');
+      const company = targetItem.company || 'General';
+      const storageType = targetItem.storageType || 'Caja';
+      const idx = prev.findIndex((r) =>
+        r.garmentName.toLowerCase() === gLow &&
+        r.company.toLowerCase() === company.toLowerCase() &&
+        r.storageType.toLowerCase() === storageType.toLowerCase() &&
+        (r.season || '').toLowerCase() === season
+      );
+      if (idx >= 0) {
+        const next = [...prev];
+        const row = { ...next[idx] };
+        const sizes = { ...row.sizes };
+        sizes[targetItem.size] = Math.max(0, newStock);
+        row.sizes = sizes;
+        row.total = Object.values(sizes).reduce((a, b) => a + Number(b || 0), 0);
+        next[idx] = row;
+        return next;
+      }
+      return prev;
+    });
 
     const adjustmentMovement: StockMovement = {
       id: `mov-${Date.now()}`,
