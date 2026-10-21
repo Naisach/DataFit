@@ -471,7 +471,7 @@ export const GoogleDriveView: React.FC = () => {
               </div>
               <h3 className="font-semibold text-slate-900 text-sm">Actas de Entrega y EPP</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Registro de trazabilidad y firmas de {deliveries.length} despachos para auditorías laborales y normativas de seguridad.
+                Registro de trazabilidad y actas de {deliveries.length} despachos para auditorías laborales y normativas de seguridad.
               </p>
             </div>
             <button

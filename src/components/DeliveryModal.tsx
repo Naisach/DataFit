@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUniforms } from '../context/UniformsContext';
 import { Employee, UniformDelivery, DeliveryStatus, DeliveryItem } from '../types';
-import { X, PackageCheck, User, ShieldCheck, Sun, Check, AlertTriangle, PenTool, RotateCcw } from 'lucide-react';
+import { X, PackageCheck, User, ShieldCheck, Sun, Check, AlertTriangle } from 'lucide-react';
 
 interface DeliveryModalProps {
   isOpen: boolean;
@@ -22,11 +22,6 @@ export const DeliveryModal: React.FC<DeliveryModalProps> = ({
   const [dispatcherName, setDispatcherName] = useState('Jorge Henríquez (Bodega Central)');
   const [status, setStatus] = useState<DeliveryStatus>('entregada');
   const [comments, setComments] = useState('');
-
-  // Signature canvas
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [hasSignature, setHasSignature] = useState(false);
 
   // Active employee object
   const currentEmp = employees.find((e) => e.id === selectedEmployeeId) || preselectedEmployee;
@@ -68,63 +63,11 @@ export const DeliveryModal: React.FC<DeliveryModalProps> = ({
     }
   }, [currentEmp, kitType]);
 
-  // Canvas drawing handlers
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    setIsDrawing(true);
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#0f172a';
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    setHasSignature(true);
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const clearSignature = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setHasSignature(false);
-  };
-
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentEmp) return;
-
-    let sigData = '';
-    if (canvasRef.current && hasSignature) {
-      sigData = canvasRef.current.toDataURL('image/png');
-    } else {
-      // Fallback digital acknowledgment
-      sigData = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="160" height="40"><text x="10" y="25" font-family="sans-serif" font-size="12" fill="%230f172a">Firma Digital Registrada</text></svg>';
-    }
 
     const kitTitleMap = {
       estival: 'Kit Estival 2026-2027 (Protección UV)',
@@ -144,7 +87,7 @@ export const DeliveryModal: React.FC<DeliveryModalProps> = ({
       status,
       deliveryDate,
       dispatcherName,
-      receiverSignature: sigData,
+      receiverSignature: 'Entrega Registrada en Bodega',
       signedAt: status === 'entregada' ? `${deliveryDate} 10:30` : undefined,
       comments,
     });
@@ -195,7 +138,7 @@ export const DeliveryModal: React.FC<DeliveryModalProps> = ({
                 Registrar Entrega de Uniforme
               </h2>
               <p className="text-xs text-slate-500">
-                Entrega física en bodega o faena con comprobante y firma
+                Entrega física en bodega o faena con comprobante
               </p>
             </div>
           </div>
@@ -331,41 +274,6 @@ export const DeliveryModal: React.FC<DeliveryModalProps> = ({
                 className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg"
               />
             </div>
-          </div>
-
-          {/* Digital Signature Canvas */}
-          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/50 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5 font-semibold text-slate-700">
-                <PenTool className="w-3.5 h-3.5 text-slate-500" />
-                <span>Firma de Recepción Conforme del Trabajador</span>
-              </div>
-              <button
-                type="button"
-                onClick={clearSignature}
-                className="text-[11px] text-slate-500 hover:text-slate-800 flex items-center gap-1"
-              >
-                <RotateCcw className="w-3 h-3" /> Limpiar firma
-              </button>
-            </div>
-            <div className="border border-dashed border-slate-300 rounded-lg bg-white overflow-hidden touch-none">
-              <canvas
-                ref={canvasRef}
-                width={500}
-                height={100}
-                onMouseDown={startDrawing}
-                onMouseMove={draw}
-                onMouseUp={stopDrawing}
-                onMouseLeave={stopDrawing}
-                onTouchStart={startDrawing}
-                onTouchMove={draw}
-                onTouchEnd={stopDrawing}
-                className="w-full h-24 cursor-crosshair block"
-              />
-            </div>
-            <p className="text-[10px] text-slate-400 text-center">
-              Firma con el mouse o dedo en pantalla touch para confirmar recepción
-            </p>
           </div>
 
           {/* Comments */}

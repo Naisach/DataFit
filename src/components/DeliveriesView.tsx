@@ -91,7 +91,7 @@ export const DeliveriesView: React.FC = () => {
             Administración y Control de Entregas
           </h1>
           <p className="text-xs text-slate-500">
-            Registro de recepción de kits, comprobantes firmados y gestión de cambios de talla
+            Registro de recepción de kits, comprobantes de entrega y gestión de cambios de talla
           </p>
         </div>
 
@@ -399,23 +399,15 @@ export const DeliveriesView: React.FC = () => {
                 El trabajador declara recibir a entera conformidad las prendas descritas en su talla correspondiente, comprometiéndose a su uso exclusivo durante la jornada laboral según la normativa de seguridad y prevención de riesgos.
               </p>
 
-              {/* Signature display */}
+              {/* Delivery info display */}
               <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-slate-400">Entregado por:</p>
                   <p className="font-medium text-slate-800">{selectedVoucher.dispatcherName}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] text-slate-400">Firma del Trabajador:</p>
-                  {selectedVoucher.receiverSignature ? (
-                    <img
-                      src={selectedVoucher.receiverSignature}
-                      alt="Firma"
-                      className="h-10 border-b border-slate-400 inline-block mt-0.5"
-                    />
-                  ) : (
-                    <span className="text-[11px] italic text-slate-400">[Firma física pendiente]</span>
-                  )}
+                  <p className="text-[10px] text-slate-400">Fecha de Entrega:</p>
+                  <p className="font-medium text-slate-800">{selectedVoucher.deliveryDate}</p>
                 </div>
               </div>
             </div>
