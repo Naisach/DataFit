@@ -78,6 +78,8 @@ export interface UniformDelivery {
   comments?: string;
 }
 
+export type SeasonType = 'verano' | 'invierno';
+
 export interface GarmentSpec {
   id: string;
   name: string;
@@ -95,21 +97,46 @@ export interface PurchasePlanItem {
   size: string;
   unitCost: number;
   confirmedCount: number; // Tallas recolectadas reales
-  bufferPercentage: number; // Ej: 12% para temporada estival
+  bufferPercentage: number; // Ej: 15%
   bufferUnits: number;
-  projectedSeasonalAddition: number; // Para temporeros previstos no fichados
+  projectedSeasonalAddition?: number; // Opcional / legado
   totalToOrder: number;
   totalCost: number;
 }
 
 export interface SeasonPlanningConfig {
-  seasonName: string;
-  targetDeliveryDate: string; // ej: 15 de Noviembre
+  seasonName: string; // Ej: "Verano 2026" o "Invierno 2027"
+  seasonType: SeasonType; // 'verano' | 'invierno'
+  period?: string; // Ej: "Verano 2026"
+  targetDeliveryDate: string; // Ej: 15 de Noviembre
   supplierCutoffDate: string; // Lead time calculation
-  projectedSummerWorkers: number; // ej: 120 temporeros estivales proyectados
-  currentSeasonalWorkers: number; // los actualmente registrados
-  permanentWorkersCount: number;
-  bufferPercent: number; // ej: 15%
+  projectedSummerWorkers?: number; // Legado
+  currentSeasonalWorkers?: number; // Legado
+  permanentWorkersCount?: number; // Legado
+  bufferPercent: number; // Ej: 15%
+}
+
+export function isGarmentInSeason(garmentName: string, season: SeasonType): boolean {
+  const name = garmentName.trim().toLowerCase();
+  if (season === 'verano') {
+    // Verano: Camisa M/C, Blusa M/C, Sweater M/C, Pantalón hombre/mujer, Corbata
+    return (
+      name.includes('m/c') ||
+      name.includes('pantalón') ||
+      name.includes('pantalon') ||
+      name.includes('corbata')
+    );
+  } else {
+    // Invierno: Camisa M/L, Blusa M/L, Sweater M/L, Polar hombre/mujer, Parka unisex, Pantalón hombre/mujer, Corbata
+    return (
+      name.includes('m/l') ||
+      name.includes('polar') ||
+      name.includes('parka') ||
+      name.includes('pantalón') ||
+      name.includes('pantalon') ||
+      name.includes('corbata')
+    );
+  }
 }
 
 export interface InventoryItem {

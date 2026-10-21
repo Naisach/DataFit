@@ -28,7 +28,7 @@ export const DashboardView: React.FC = () => {
   const totalEmployees = employees.length;
   const permanentCount = employees.filter((e) => e.type === 'permanente').length;
   const seasonalRegistered = employees.filter((e) => e.type === 'estival').length;
-  const seasonalProjectedTotal = planningConfig.projectedSummerWorkers;
+  const seasonalProjectedTotal = planningConfig.projectedSummerWorkers || 0;
   const completedSurveys = employees.filter((e) => e.surveyStatus === 'completado').length;
   const pendingSurveys = totalEmployees - completedSurveys;
   const surveyPercent = totalEmployees > 0 ? Math.round((completedSurveys / totalEmployees) * 100) : 0;

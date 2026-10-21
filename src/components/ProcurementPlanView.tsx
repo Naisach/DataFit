@@ -9,6 +9,7 @@ import {
   Printer,
   FileSpreadsheet,
   Sun,
+  Snowflake,
   AlertTriangle,
   CheckCircle2,
   Package,
@@ -17,6 +18,7 @@ import {
   Info,
   HardDrive,
   RefreshCw,
+  Users,
 } from 'lucide-react';
 import { exportProcurementPlanToDrive } from '../services/googleDriveService';
 import { hasActiveDriveToken } from '../services/authService';
@@ -30,11 +32,22 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts';
+import { SeasonType, isGarmentInSeason } from '../types';
+
+const PRESET_PERIODS: { label: string; season: SeasonType; cutoff: string; target: string }[] = [
+  { label: 'Verano 2025', season: 'verano', cutoff: '2024-10-01', target: '2024-11-15' },
+  { label: 'Invierno 2025', season: 'invierno', cutoff: '2025-03-01', target: '2025-04-15' },
+  { label: 'Verano 2026', season: 'verano', cutoff: '2025-10-01', target: '2025-11-15' },
+  { label: 'Invierno 2026', season: 'invierno', cutoff: '2026-03-01', target: '2026-04-15' },
+  { label: 'Verano 2027', season: 'verano', cutoff: '2026-10-01', target: '2026-11-15' },
+  { label: 'Invierno 2027', season: 'invierno', cutoff: '2027-03-01', target: '2027-04-15' },
+  { label: 'Verano 2028', season: 'verano', cutoff: '2027-10-01', target: '2027-11-15' },
+  { label: 'Invierno 2028', season: 'invierno', cutoff: '2028-03-01', target: '2028-04-15' },
+];
 
 export const ProcurementPlanView: React.FC = () => {
   const {
     purchasePlan,
-    totalBudgetCLP,
     planningConfig,
     setPlanningConfig,
     garments,
@@ -43,6 +56,21 @@ export const ProcurementPlanView: React.FC = () => {
 
   const [selectedGarmentFilter, setSelectedGarmentFilter] = useState<string>('todos');
   const [isTenderModalOpen, setIsTenderModalOpen] = useState(false);
+  const [isExportingDrive, setIsExportingDrive] = useState(false);
+  const [driveExportSuccess, setDriveExportSuccess] = useState<string | null>(null);
+
+  // Active season resolution
+  const activeSeason: SeasonType =
+    planningConfig.seasonType ||
+    (planningConfig.seasonName.toLowerCase().includes('invierno') ? 'invierno' : 'verano');
+
+  // Filter garments strictly for the selected season
+  const seasonalGarments = garments.filter((g) => isGarmentInSeason(g.name, activeSeason));
+
+  // Items from purchasePlan that belong to the active season
+  const seasonalPlanItems = purchasePlan.filter((p) =>
+    seasonalGarments.some((g) => g.id === p.garmentId)
+  );
 
   // Timeline computation
   const today = new Date('2026-09-21');
@@ -50,34 +78,77 @@ export const ProcurementPlanView: React.FC = () => {
   const target = new Date(planningConfig.targetDeliveryDate);
   const daysToCutoff = Math.ceil((cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   const daysToTarget = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-  // Lead time alert state
   const isCutoffUrgent = daysToCutoff <= 14;
 
-  // Filtered items
+  // Filtered items by selected garment dropdown
   const filteredPlanItems = selectedGarmentFilter === 'todos'
-    ? purchasePlan
-    : purchasePlan.filter((p) => p.garmentId === selectedGarmentFilter);
+    ? seasonalPlanItems
+    : seasonalPlanItems.filter((p) => p.garmentId === selectedGarmentFilter);
 
-  // Total units to order
-  const totalGrossUnits = purchasePlan.reduce((acc, curr) => acc + curr.totalToOrder, 0);
-  const totalInStockUnits = purchasePlan.reduce((acc, curr) => acc + (curr.inStock || 0), 0);
-  const totalNetUnits = purchasePlan.reduce((acc, curr) => acc + (curr.netToOrder !== undefined ? curr.netToOrder : curr.totalToOrder), 0);
-  const totalBufferUnits = purchasePlan.reduce((acc, curr) => acc + curr.bufferUnits, 0);
+  // Aggregated totals
+  const totalGrossUnits = seasonalPlanItems.reduce((acc, curr) => acc + curr.totalToOrder, 0);
+  const totalInStockUnits = seasonalPlanItems.reduce((acc, curr) => acc + (curr.inStock || 0), 0);
+  const totalNetUnits = seasonalPlanItems.reduce(
+    (acc, curr) => acc + (curr.netToOrder !== undefined ? curr.netToOrder : curr.totalToOrder),
+    0
+  );
+  const totalBufferUnits = seasonalPlanItems.reduce((acc, curr) => acc + curr.bufferUnits, 0);
+  const totalNetBudgetCLP = seasonalPlanItems.reduce(
+    (acc, curr) =>
+      acc + ((curr.netToOrder !== undefined ? curr.netToOrder : curr.totalToOrder) * curr.unitCost),
+    0
+  );
 
-  // Summary by garment for the chart
-  const garmentChartData = garments.map((g) => {
-    const items = purchasePlan.filter((p) => p.garmentId === g.id);
+  // Switch season (Verano <-> Invierno)
+  const handleSeasonToggle = (newSeason: SeasonType) => {
+    if (newSeason === activeSeason) return;
+    const yearMatch = planningConfig.seasonName.match(/\d{4}/);
+    const year = yearMatch ? yearMatch[0] : '2026';
+    const newPeriodLabel = `${newSeason === 'verano' ? 'Verano' : 'Invierno'} ${year}`;
+    const preset = PRESET_PERIODS.find((p) => p.label === newPeriodLabel);
+
+    setPlanningConfig((prev) => ({
+      ...prev,
+      seasonType: newSeason,
+      seasonName: newPeriodLabel,
+      period: newPeriodLabel,
+      supplierCutoffDate: preset ? preset.cutoff : (newSeason === 'verano' ? `${year}-10-01` : `${year}-03-01`),
+      targetDeliveryDate: preset ? preset.target : (newSeason === 'verano' ? `${year}-11-15` : `${year}-04-15`),
+    }));
+    setSelectedGarmentFilter('todos');
+  };
+
+  // Switch period dropdown
+  const handlePeriodChange = (newPeriod: string) => {
+    const preset = PRESET_PERIODS.find((p) => p.label === newPeriod);
+    const newSeason: SeasonType = preset
+      ? preset.season
+      : newPeriod.toLowerCase().includes('invierno')
+      ? 'invierno'
+      : 'verano';
+
+    setPlanningConfig((prev) => ({
+      ...prev,
+      seasonType: newSeason,
+      seasonName: newPeriod,
+      period: newPeriod,
+      supplierCutoffDate: preset ? preset.cutoff : prev.supplierCutoffDate,
+      targetDeliveryDate: preset ? preset.target : prev.targetDeliveryDate,
+    }));
+    setSelectedGarmentFilter('todos');
+  };
+
+  // Summary by garment for the chart (strictly seasonal garments)
+  const garmentChartData = seasonalGarments.map((g) => {
+    const items = seasonalPlanItems.filter((p) => p.garmentId === g.id);
     const confirmed = items.reduce((acc, curr) => acc + curr.confirmedCount, 0);
-    const projected = items.reduce((acc, curr) => acc + curr.projectedSeasonalAddition, 0);
     const buffer = items.reduce((acc, curr) => acc + curr.bufferUnits, 0);
     return {
       name: g.name.length > 20 ? g.name.substring(0, 20) + '...' : g.name,
       fullName: g.name,
       Confirmado: confirmed,
-      ProyeccionEstival: projected,
       BufferSeguridad: buffer,
-      Total: confirmed + projected + buffer,
+      Total: confirmed + buffer,
     };
   });
 
@@ -88,25 +159,27 @@ export const ProcurementPlanView: React.FC = () => {
       'Nombre de Prenda',
       'Categoria',
       'Talla',
-      'Personal Confirmado (Reg.)',
-      'Proyeccion Temporeros Estivales',
+      'Personal Confirmado (Nómina)',
       `Colchon Buffer (${planningConfig.bufferPercent}%)`,
-      'Total Unidades a Confeccionar',
+      'Total Demanda Bruta',
+      'En Bodega',
+      'Neto a Comprar',
       'Costo Unitario Estimado (CLP)',
-      'Subtotal Estimado (CLP)',
+      'Subtotal Neto (CLP)',
     ];
 
-    const rows = purchasePlan.map((p) => [
+    const rows = filteredPlanItems.map((p) => [
       `"${p.garmentId}"`,
       `"${p.garmentName}"`,
       `"${p.category}"`,
       `"${p.size}"`,
       p.confirmedCount,
-      p.projectedSeasonalAddition,
       p.bufferUnits,
       p.totalToOrder,
+      p.inStock || 0,
+      p.netToOrder !== undefined ? p.netToOrder : p.totalToOrder,
       p.unitCost,
-      p.totalCost,
+      (p.netToOrder !== undefined ? p.netToOrder : p.totalToOrder) * p.unitCost,
     ]);
 
     const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\n');
@@ -119,12 +192,8 @@ export const ProcurementPlanView: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const [isExportingDrive, setIsExportingDrive] = useState(false);
-  const [driveExportSuccess, setDriveExportSuccess] = useState<string | null>(null);
-
   const handleExportDrive = async () => {
     if (!hasActiveDriveToken()) {
-      // Prompt sign in via Google Drive view
       window.location.hash = '#drive';
       alert('Por favor conecte su cuenta en la pestaña "Google Drive" para sincronizar directamente.');
       return;
@@ -132,7 +201,7 @@ export const ProcurementPlanView: React.FC = () => {
     setIsExportingDrive(true);
     setDriveExportSuccess(null);
     try {
-      const res = await exportProcurementPlanToDrive(purchasePlan, planningConfig, totalBudgetCLP);
+      const res = await exportProcurementPlanToDrive(seasonalPlanItems, planningConfig, totalNetBudgetCLP);
       setDriveExportSuccess(`Orden de compra guardada con éxito en Google Drive: ${res.name}`);
       setTimeout(() => setDriveExportSuccess(null), 5000);
     } catch (err: any) {
@@ -158,15 +227,19 @@ export const ProcurementPlanView: React.FC = () => {
       {/* View Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold mb-1">
-            <Sun className="w-3.5 h-3.5 text-amber-600" />
-            <span>Planificador Oportuno de Adquisiciones</span>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900 text-amber-400 text-[11px] font-bold mb-1 shadow-2xs">
+            {activeSeason === 'verano' ? (
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
+            ) : (
+              <Snowflake className="w-3.5 h-3.5 text-sky-400" />
+            )}
+            <span>Planificación Estacional de Adquisiciones</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 font-display">
-            Planificación y Análisis de Compras
+            Planificación de Compras: {planningConfig.seasonName}
           </h1>
           <p className="text-xs text-slate-500">
-            Proyección de demanda, cálculo de colchón de contingencia para temporeros y cronograma oportuno
+            Cálculo de requerimientos por nómina activa, prendas estacionales y colchón de seguridad para recambios
           </p>
         </div>
 
@@ -203,6 +276,115 @@ export const ProcurementPlanView: React.FC = () => {
             <Download className="w-3.5 h-3.5" />
             <span>Descargar Pedido (CSV)</span>
           </button>
+        </div>
+      </div>
+
+      {/* Main Season & Period Selector Banner */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="space-y-1">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+              Configuración de Campaña
+            </span>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                Selección de Temporada y Periodo
+              </h2>
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 ${
+                  activeSeason === 'verano'
+                    ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                    : 'bg-sky-100 text-sky-900 border border-sky-200'
+                }`}
+              >
+                {activeSeason === 'verano' ? (
+                  <Sun className="w-3.5 h-3.5 text-amber-600" />
+                ) : (
+                  <Snowflake className="w-3.5 h-3.5 text-sky-600" />
+                )}
+                <span>{planningConfig.seasonName}</span>
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">
+              {activeSeason === 'verano'
+                ? 'El pedido calcula exclusivamente las prendas de Verano: Camisa M/C, Blusa M/C, Sweater M/C, Pantalón hombre/mujer y Corbata.'
+                : 'El pedido calcula exclusivamente las prendas de Invierno: Camisa M/L, Blusa M/L, Sweater M/L, Polar hombre/mujer, Parka unisex, Pantalón hombre/mujer y Corbata.'}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Season Toggle: Verano vs Invierno */}
+            <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200">
+              <button
+                type="button"
+                id="btn-season-verano"
+                onClick={() => handleSeasonToggle('verano')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                  activeSeason === 'verano'
+                    ? 'bg-amber-500 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                <Sun className="w-4 h-4" />
+                <span>Verano</span>
+              </button>
+              <button
+                type="button"
+                id="btn-season-invierno"
+                onClick={() => handleSeasonToggle('invierno')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                  activeSeason === 'invierno'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                <Snowflake className="w-4 h-4" />
+                <span>Invierno</span>
+              </button>
+            </div>
+
+            {/* Period Dropdown */}
+            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+              <label htmlFor="select-planning-period" className="text-xs font-bold text-slate-600 pl-1">
+                Periodo:
+              </label>
+              <select
+                id="select-planning-period"
+                value={planningConfig.seasonName}
+                onChange={(e) => handlePeriodChange(e.target.value)}
+                className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 shadow-2xs focus:ring-2 focus:ring-amber-500 focus:outline-none cursor-pointer"
+              >
+                <optgroup label="Campañas de Verano">
+                  <option value="Verano 2025">Verano 2025</option>
+                  <option value="Verano 2026">Verano 2026</option>
+                  <option value="Verano 2027">Verano 2027</option>
+                  <option value="Verano 2028">Verano 2028</option>
+                </optgroup>
+                <optgroup label="Campañas de Invierno">
+                  <option value="Invierno 2025">Invierno 2025</option>
+                  <option value="Invierno 2026">Invierno 2026</option>
+                  <option value="Invierno 2027">Invierno 2027</option>
+                  <option value="Invierno 2028">Invierno 2028</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Previews of Seasonal Garments */}
+        <div className="mt-3 pt-2 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-semibold text-slate-500">
+            Prendas de {activeSeason === 'verano' ? 'Verano' : 'Invierno'} ({seasonalGarments.length} definidas):
+          </span>
+          {seasonalGarments.map((g) => (
+            <span
+              key={g.id}
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200"
+            >
+              <Package className="w-3 h-3 text-slate-400" />
+              <span>{g.name}</span>
+            </span>
+          ))}
         </div>
       </div>
 
@@ -251,34 +433,9 @@ export const ProcurementPlanView: React.FC = () => {
           </div>
         </div>
 
-        {/* Dynamic Simulation Controls Bar */}
-        <div className="mt-4 pt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-          {/* Config 1: Temporeros proyectados adicionales */}
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-            <label className="block font-semibold text-slate-700 mb-1">
-              Temporeros Estivales Proyectados
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min={0}
-                max={500}
-                value={planningConfig.projectedSummerWorkers}
-                onChange={(e) =>
-                  setPlanningConfig((prev) => ({
-                    ...prev,
-                    projectedSummerWorkers: Math.max(0, parseInt(e.target.value) || 0),
-                  }))
-                }
-                className="w-20 px-2 py-1 bg-white border border-slate-300 rounded font-bold text-center text-slate-900"
-              />
-              <span className="text-slate-500 text-[11px]">
-                ({employees.filter((e) => e.type === 'estival').length} ya registrados)
-              </span>
-            </div>
-          </div>
-
-          {/* Config 2: Colchón de seguridad (Buffer) */}
+        {/* Planning Parameters Bar (No temporeros) */}
+        <div className="mt-4 pt-1 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+          {/* Config 1: Colchón de seguridad (Buffer) */}
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
             <div className="flex items-center justify-between mb-1">
               <label className="font-semibold text-slate-700">Colchón de Seguridad (Buffer)</label>
@@ -299,13 +456,13 @@ export const ProcurementPlanView: React.FC = () => {
               className="w-full accent-amber-600"
             />
             <span className="text-[10px] text-slate-400">
-              +{totalBufferUnits} unidades para cambios y rotación
+              +{totalBufferUnits} unidades de contingencia para cambios y rotación
             </span>
           </div>
 
-          {/* Config 3: Fecha corte O.C. */}
+          {/* Config 2: Fecha corte O.C. */}
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-            <label className="block font-semibold text-slate-700 mb-1">Fecha Límite O.C.</label>
+            <label className="block font-semibold text-slate-700 mb-1">Fecha Límite O.C. Proveedor</label>
             <input
               type="date"
               value={planningConfig.supplierCutoffDate}
@@ -319,7 +476,7 @@ export const ProcurementPlanView: React.FC = () => {
             />
           </div>
 
-          {/* Config 4: Fecha Entrega Deseada */}
+          {/* Config 3: Fecha Entrega Deseada */}
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
             <label className="block font-semibold text-slate-700 mb-1">Fecha Entrega Faena</label>
             <input
@@ -348,7 +505,7 @@ export const ProcurementPlanView: React.FC = () => {
             <span className="text-xs text-slate-500">prendas</span>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Nómina + temporeros + buffer ({totalBufferUnits} u.)
+            Nómina activa ({employees.length} trab.) + buffer ({totalBufferUnits} u.)
           </p>
         </div>
 
@@ -371,7 +528,7 @@ export const ProcurementPlanView: React.FC = () => {
           </span>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-amber-600">{totalNetUnits}</span>
-            <span className="text-xs text-slate-500">a licitar</span>
+            <span className="text-xs text-slate-500">a confeccionar</span>
           </div>
           <p className="mt-1 text-xs text-slate-500">
             Faltante neto para cubrir la campaña
@@ -384,12 +541,12 @@ export const ProcurementPlanView: React.FC = () => {
           </span>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-slate-900">
-              ${(totalBudgetCLP).toLocaleString('es-CL')}
+              ${totalNetBudgetCLP.toLocaleString('es-CL')}
             </span>
             <span className="text-xs text-slate-500">CLP</span>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Aprox. ${(Math.round(totalBudgetCLP / 930)).toLocaleString()} USD
+            Aprox. ${(Math.round(totalNetBudgetCLP / 930)).toLocaleString()} USD
           </p>
         </div>
       </div>
@@ -399,10 +556,10 @@ export const ProcurementPlanView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div>
             <h2 className="text-base font-bold text-slate-900">
-              Demanda Consolidada por Tipo de Prenda
+              Demanda de {planningConfig.seasonName} por Prenda
             </h2>
             <p className="text-xs text-slate-500">
-              Desglose entre requerimiento confirmado, proyección de temporeros y colchón de seguridad
+              Desglose entre dotación confirmada de nómina y colchón de seguridad (+{planningConfig.bufferPercent}%)
             </p>
           </div>
         </div>
@@ -423,9 +580,14 @@ export const ProcurementPlanView: React.FC = () => {
                 }}
               />
               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-              <Bar dataKey="Confirmado" stackId="a" fill="#0f172a" name="Confirmado (Nómina)" />
-              <Bar dataKey="ProyeccionEstival" stackId="a" fill="#f59e0b" name="Proyección Temporeros" />
-              <Bar dataKey="BufferSeguridad" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} name={`Buffer (+${planningConfig.bufferPercent}%)`} />
+              <Bar dataKey="Confirmado" stackId="a" fill="#0f172a" name="Nómina Confirmada" />
+              <Bar
+                dataKey="BufferSeguridad"
+                stackId="a"
+                fill="#10b981"
+                radius={[4, 4, 0, 0]}
+                name={`Buffer (+${planningConfig.bufferPercent}%)`}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -436,10 +598,10 @@ export const ProcurementPlanView: React.FC = () => {
         <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/60">
           <div>
             <h3 className="font-bold text-slate-900 text-sm">
-              Matriz Consolidada de Tallas y Plan de Pedido
+              Matriz Consolidada de Tallas y Pedido ({planningConfig.seasonName})
             </h3>
             <p className="text-xs text-slate-500">
-              Desglose detallado por prenda y talla con unidades base + colchón de contingencia
+              Mostrando únicamente las {seasonalGarments.length} prendas correspondientes a {activeSeason === 'verano' ? 'Verano' : 'Invierno'}
             </p>
           </div>
 
@@ -450,8 +612,8 @@ export const ProcurementPlanView: React.FC = () => {
               onChange={(e) => setSelectedGarmentFilter(e.target.value)}
               className="px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none"
             >
-              <option value="todos">Todas las prendas</option>
-              {garments.map((g) => (
+              <option value="todos">Todas las prendas ({seasonalGarments.length})</option>
+              {seasonalGarments.map((g) => (
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
             </select>
@@ -464,8 +626,7 @@ export const ProcurementPlanView: React.FC = () => {
               <tr>
                 <th className="py-2.5 px-4">Prenda de Uniforme</th>
                 <th className="py-2.5 px-3 text-center">Talla</th>
-                <th className="py-2.5 px-3 text-center">Confirmado</th>
-                <th className="py-2.5 px-3 text-center">Proy. Estival</th>
+                <th className="py-2.5 px-3 text-center">Nómina Confirmada</th>
                 <th className="py-2.5 px-3 text-center">Buffer (+{planningConfig.bufferPercent}%)</th>
                 <th className="py-2.5 px-3 text-center font-bold text-slate-700">Demanda Bruta</th>
                 <th className="py-2.5 px-3 text-center font-bold text-emerald-700 bg-emerald-50/50">En Bodega</th>
@@ -486,7 +647,6 @@ export const ProcurementPlanView: React.FC = () => {
                     </span>
                   </td>
                   <td className="py-2.5 px-3 text-center text-slate-600">{item.confirmedCount}</td>
-                  <td className="py-2.5 px-3 text-center text-amber-700 font-medium">+{item.projectedSeasonalAddition}</td>
                   <td className="py-2.5 px-3 text-center text-emerald-700 font-semibold">+{item.bufferUnits}</td>
                   <td className="py-2.5 px-3 text-center font-medium text-slate-600">
                     {item.totalToOrder} un.
@@ -495,7 +655,13 @@ export const ProcurementPlanView: React.FC = () => {
                     {item.inStock || 0} un.
                   </td>
                   <td className="py-2.5 px-3 text-center font-bold text-slate-900 bg-amber-50/50">
-                    <span className={`px-2 py-0.5 rounded ${item.netToOrder > 0 ? 'bg-amber-100 text-amber-900 font-extrabold' : 'bg-slate-100 text-slate-400 font-normal'}`}>
+                    <span
+                      className={`px-2 py-0.5 rounded ${
+                        (item.netToOrder !== undefined ? item.netToOrder : item.totalToOrder) > 0
+                          ? 'bg-amber-100 text-amber-900 font-extrabold'
+                          : 'bg-slate-100 text-slate-400 font-normal'
+                      }`}
+                    >
                       {item.netToOrder !== undefined ? item.netToOrder : item.totalToOrder} un.
                     </span>
                   </td>
@@ -507,21 +673,34 @@ export const ProcurementPlanView: React.FC = () => {
                   </td>
                 </tr>
               ))}
+              {filteredPlanItems.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="py-8 text-center text-slate-400">
+                    No hay prendas registradas para el filtro seleccionado.
+                  </td>
+                </tr>
+              )}
             </tbody>
             <tfoot className="bg-slate-50 border-t-2 border-slate-200 font-bold text-slate-900 text-xs">
               <tr>
-                <td colSpan={6} className="py-3 px-4 text-right uppercase tracking-wider">
-                  Total Neto a Comprar a Proveedores:
+                <td colSpan={5} className="py-3 px-4 text-right uppercase tracking-wider">
+                  Total Neto a Comprar ({planningConfig.seasonName}):
                 </td>
                 <td className="py-3 px-3 text-center text-emerald-700 font-extrabold bg-emerald-100/40">
                   {filteredPlanItems.reduce((a, b) => a + (b.inStock || 0), 0)} u.
                 </td>
                 <td className="py-3 px-3 text-center font-extrabold text-amber-900 bg-amber-100/60">
-                  {filteredPlanItems.reduce((a, b) => a + (b.netToOrder !== undefined ? b.netToOrder : b.totalToOrder), 0)} unidades
+                  {filteredPlanItems.reduce(
+                    (a, b) => a + (b.netToOrder !== undefined ? b.netToOrder : b.totalToOrder),
+                    0
+                  )} unidades
                 </td>
                 <td className="py-3 px-3"></td>
                 <td className="py-3 px-4 text-right font-extrabold text-slate-900 text-sm font-mono">
-                  ${filteredPlanItems.reduce((a, b) => a + ((b.netToOrder !== undefined ? b.netToOrder : b.totalToOrder) * b.unitCost), 0).toLocaleString('es-CL')} CLP
+                  ${filteredPlanItems.reduce(
+                    (a, b) => a + ((b.netToOrder !== undefined ? b.netToOrder : b.totalToOrder) * b.unitCost),
+                    0
+                  ).toLocaleString('es-CL')} CLP
                 </td>
               </tr>
             </tfoot>
@@ -542,7 +721,7 @@ export const ProcurementPlanView: React.FC = () => {
               </div>
               <button
                 onClick={() => setIsTenderModalOpen(false)}
-                className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500"
+                className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 cursor-pointer"
               >
                 ✕
               </button>
@@ -561,22 +740,37 @@ export const ProcurementPlanView: React.FC = () => {
               <div className="space-y-2">
                 <p className="font-bold text-slate-800">Especificaciones Generales Requeridas:</p>
                 <ul className="list-disc list-inside space-y-1 text-slate-600 text-[11px]">
-                  <li>Prendas superiores de temporada deben certificar factor de protección solar UPF 50+.</li>
+                  {activeSeason === 'verano' ? (
+                    <>
+                      <li>Prendas superiores de temporada estival (camisas y blusas M/C) deben certificar factor de protección solar UPF 50+ y tejido respirable.</li>
+                      <li>Sweater unisex manga corta con tejido suave y anti-pilling de media estación.</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>Prendas de abrigo de invierno (parkas y polares) deben certificar aislamiento térmico para bajas temperaturas.</li>
+                      <li>Parka unisex impermeable con costuras termoselladas y capucha desmontable.</li>
+                      <li>Camisas y blusas manga larga en popelina 65/35 de alta resistencia.</li>
+                    </>
+                  )}
                   <li>Pantalones en tela ripstop liviana (65% poliéster / 35% algodón) con triple costura reforzada.</li>
-                  <li>Zapatos de seguridad con puntera de composite no metálica (dieléctrico) y plantilla anti-perforación.</li>
+                  <li>Corbata institucional con nudo reforzado y acabado anti-manchas.</li>
                   <li>El proveedor debe garantizar un plazo de recambio de tallas de máximo 5 días hábiles ante descalces.</li>
                 </ul>
               </div>
 
               <div>
-                <p className="font-bold text-slate-800 mb-1">Volumen Consolidado por Prenda:</p>
+                <p className="font-bold text-slate-800 mb-1">
+                  Volumen Consolidado ({seasonalGarments.length} prendas de {activeSeason === 'verano' ? 'Verano' : 'Invierno'}):
+                </p>
                 <div className="space-y-1 text-[11px]">
-                  {garments.map((g) => {
-                    const sum = purchasePlan.filter((p) => p.garmentId === g.id).reduce((a, b) => a + b.totalToOrder, 0);
+                  {seasonalGarments.map((g) => {
+                    const sum = seasonalPlanItems
+                      .filter((p) => p.garmentId === g.id)
+                      .reduce((a, b) => a + (b.netToOrder !== undefined ? b.netToOrder : b.totalToOrder), 0);
                     return (
                       <div key={g.id} className="flex justify-between bg-white p-1.5 rounded border border-slate-200">
                         <span className="font-medium text-slate-800">{g.name}</span>
-                        <strong className="font-mono text-slate-900">{sum} unidades</strong>
+                        <strong className="font-mono text-slate-900">{sum} unidades a licitar</strong>
                       </div>
                     );
                   })}
@@ -587,13 +781,13 @@ export const ProcurementPlanView: React.FC = () => {
             <div className="flex items-center justify-end gap-3 pt-4">
               <button
                 onClick={() => setIsTenderModalOpen(false)}
-                className="px-4 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg"
+                className="px-4 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer"
               >
                 Cerrar
               </button>
               <button
                 onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs"
+                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs cursor-pointer"
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>Imprimir Pliego de Cotización</span>

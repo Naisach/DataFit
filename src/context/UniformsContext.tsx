@@ -11,6 +11,8 @@ import {
   StockMovement,
   ActiveAppView,
   MatrixRow,
+  SeasonType,
+  isGarmentInSeason,
 } from '../types';
 import {
   INITIAL_EMPLOYEES,
@@ -112,12 +114,14 @@ interface UniformsContextType {
 }
 
 const DEFAULT_PLANNING_CONFIG: SeasonPlanningConfig = {
-  seasonName: 'Campaña Estival 2026-2027',
+  seasonName: 'Verano 2026',
+  seasonType: 'verano',
+  period: 'Verano 2026',
   targetDeliveryDate: '2026-11-15',
   supplierCutoffDate: '2026-10-01',
-  projectedSummerWorkers: 65,
-  currentSeasonalWorkers: 8,
-  permanentWorkersCount: 7,
+  projectedSummerWorkers: 0,
+  currentSeasonalWorkers: 0,
+  permanentWorkersCount: 0,
   bufferPercent: 15,
 };
 
@@ -173,10 +177,24 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     currentSeasonalWorkers: employees.filter((employee) => employee.type === 'estival').length,
   };
   // Derived counts update the UI without writing to Firestore during hydration.
-  const planningConfig: SeasonPlanningConfig = { ...DEFAULT_PLANNING_CONFIG, ...cloud.values.config, ...employeeCounts };
+  const rawConfig = cloud.values.config || {};
+  const resolvedSeasonType: SeasonType =
+    rawConfig.seasonType ||
+    (rawConfig.seasonName?.toLowerCase().includes('invierno') ? 'invierno' : 'verano');
+  const planningConfig: SeasonPlanningConfig = {
+    ...DEFAULT_PLANNING_CONFIG,
+    ...rawConfig,
+    seasonType: resolvedSeasonType,
+    ...employeeCounts,
+  };
   const setPlanningConfig: React.Dispatch<React.SetStateAction<SeasonPlanningConfig>> = (action) => {
-    cloud.setField('config', (previous: SeasonPlanningConfig) =>
-      typeof action === 'function' ? action({ ...DEFAULT_PLANNING_CONFIG, ...previous, ...employeeCounts }) : action);
+    cloud.setField('config', (previous: SeasonPlanningConfig) => {
+      const next = typeof action === 'function' ? action({ ...DEFAULT_PLANNING_CONFIG, ...previous, ...employeeCounts }) : action;
+      if (!next.seasonType) {
+        next.seasonType = next.seasonName?.toLowerCase().includes('invierno') ? 'invierno' : 'verano';
+      }
+      return next;
+    });
   };
   const [garments] = useState<GarmentSpec[]>(INITIAL_GARMENTS);
   const [activeView, setActiveView] = useState<ActiveAppView | 'self_service'>(detectInitialView);
@@ -592,7 +610,7 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     );
   };
 
-  // Purchase Planning with Real-Time Stock Subtraction
+  // Purchase Planning with Real-Time Stock Subtraction and Seasonal Garments Filter
   const calculatePurchasePlan = (): {
     items: PurchasePlanItemWithStock[];
     totalCost: number;
@@ -602,73 +620,89 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     let totalNetCost = 0;
     let totalGrossCost = 0;
 
-    const seasonalTotalProjected = planningConfig.projectedSummerWorkers;
-    const seasonalCurrent = employees.filter((e) => e.type === 'estival');
-    const seasonalRegisteredCount = seasonalCurrent.length;
+    const activeSeason: SeasonType =
+      planningConfig.seasonType ||
+      (planningConfig.seasonName?.toLowerCase().includes('invierno') ? 'invierno' : 'verano');
 
-    const getDistributionRatios = (category: string): Record<string, number> => {
-      const counts: Record<string, number> = {};
-      let total = 0;
+    // Filter strictly to garments defined for the selected season (Verano vs Invierno)
+    const seasonalGarments = garments.filter((g) => isGarmentInSeason(g.name, activeSeason));
 
-      employees.forEach((emp) => {
-        let size = '';
-        if (category === 'superior' || category === 'abrigo') size = emp.sizes.shirt;
-        else if (category === 'inferior') size = emp.sizes.pants;
-        else if (category === 'calzado') size = emp.sizes.footwear;
-        else if (category === 'proteccion') size = emp.sizes.headwear;
+    seasonalGarments.forEach((garment) => {
+      const gNameLow = garment.name.toLowerCase();
+      const isFemaleOnly = gNameLow.includes('mujer') || gNameLow.includes('blusa');
+      const isMaleOnly = gNameLow.includes('hombre');
 
-        if (size) {
-          counts[size] = (counts[size] || 0) + 1;
-          total++;
+      // Filter employees matching garment gender profile
+      const targetEmployees = employees.filter((emp) => {
+        const isEmpFemale = emp.genderFit === 'femenino' || emp.gender?.toLowerCase() === 'mujer';
+        if (isFemaleOnly) return isEmpFemale;
+        if (isMaleOnly) return !isEmpFemale;
+        return true; // unisex items
+      });
+
+      // Standard dotation quotas per person:
+      // Camisas / Blusas: 2 units per worker
+      // Pantalones: 2 units per worker
+      // Sweaters, Polar, Parka, Corbata: 1 unit per worker
+      const qtyPerPerson = (garment.category === 'superior' || garment.category === 'inferior') ? 2 : 1;
+
+      // Helper to extract the worker's size for this exact garment type
+      const getWorkerGarmentSize = (emp: Employee): string => {
+        const s = emp.sizes;
+        let val = '';
+        if (gNameLow.includes('blusa')) val = s.blusa || s.shirt;
+        else if (gNameLow.includes('camisa')) val = s.camisa || s.shirt;
+        else if (gNameLow.includes('sweater')) val = s.sweater || s.shirt;
+        else if (gNameLow.includes('polar')) val = s.polar || s.jacket || s.shirt;
+        else if (gNameLow.includes('parka')) val = s.parka || s.jacket || s.shirt;
+        else if (gNameLow.includes('pantalón') || gNameLow.includes('pantalon')) val = s.pants;
+        else if (gNameLow.includes('corbata')) {
+          if (s.corbata && s.corbata.toLowerCase() !== 'no aplica') return s.corbata;
+          return 'Estándar';
+        }
+        else if (garment.category === 'superior' || garment.category === 'abrigo') val = s.shirt;
+        else if (garment.category === 'inferior') val = s.pants;
+        else if (garment.category === 'calzado') val = s.footwear;
+        else if (garment.category === 'proteccion') val = s.headwear;
+
+        val = (val || '').trim();
+        if (val.toUpperCase() === 'XXL') return '2XL';
+        if (val.toUpperCase() === 'XXXL') return '3XL';
+        if (val.toUpperCase() === 'XXXXL') return '4XL';
+        return val;
+      };
+
+      // Collect all sizes: union of garment.allowedSizes and employee survey sizes
+      const sizeSet = new Set<string>(garment.allowedSizes);
+      targetEmployees.forEach((emp) => {
+        const sz = getWorkerGarmentSize(emp);
+        if (sz && sz.toLowerCase() !== 'no aplica') {
+          sizeSet.add(sz);
         }
       });
 
-      const ratios: Record<string, number> = {};
-      if (total > 0) {
-        Object.entries(counts).forEach(([sz, c]) => {
-          ratios[sz] = c / total;
-        });
-      }
-      return ratios;
-    };
+      const sizesToEvaluate = Array.from(sizeSet);
 
-    garments.forEach((garment) => {
-      const targetEmployees = employees.filter((emp) => garment.seasons.includes(emp.type));
-      const distRatios = getDistributionRatios(garment.category);
-      const qtyPerPerson = garment.category === 'superior' ? 2 : garment.category === 'inferior' ? 2 : 1;
-
-      garment.allowedSizes.forEach((size) => {
-        let confirmedCount = 0;
+      sizesToEvaluate.forEach((size) => {
+        let confirmedWorkersCount = 0;
         targetEmployees.forEach((emp) => {
-          let empSize = '';
-          if (garment.category === 'superior' || garment.category === 'abrigo') empSize = emp.sizes.shirt;
-          else if (garment.category === 'inferior') empSize = emp.sizes.pants;
-          else if (garment.category === 'calzado') empSize = emp.sizes.footwear;
-          else if (garment.category === 'proteccion') empSize = emp.sizes.headwear;
-
-          if (empSize === size) {
-            confirmedCount += qtyPerPerson;
+          const empSize = getWorkerGarmentSize(emp);
+          if (empSize.toLowerCase() === size.toLowerCase()) {
+            confirmedWorkersCount++;
           }
         });
 
-        let projectedAddition = 0;
-        if (garment.seasons.includes('estival')) {
-          const ratio = distRatios[size] || 1 / garment.allowedSizes.length;
-          const additionalWorkersNeeded = Math.max(0, seasonalTotalProjected - seasonalRegisteredCount);
-          projectedAddition = Math.round(additionalWorkersNeeded * ratio * qtyPerPerson);
-        }
+        const confirmedUnits = confirmedWorkersCount * qtyPerPerson;
+        const bufferUnits = Math.ceil(confirmedUnits * (planningConfig.bufferPercent / 100));
+        const totalGrossToOrder = confirmedUnits + bufferUnits;
 
-        const baseNeeded = confirmedCount + projectedAddition;
-        const bufferUnits = Math.ceil(baseNeeded * (planningConfig.bufferPercent / 100));
-        const totalGrossToOrder = baseNeeded + bufferUnits;
-
-        // Check real-time inventory in stock
+        // Check real-time inventory in warehouse
         const matchingStock = inventory.find(
           (inv) =>
-            inv.category === garment.category &&
             inv.size.toLowerCase() === size.toLowerCase() &&
-            (inv.name.toLowerCase().includes(garment.name.slice(0, 10).toLowerCase()) ||
-              garment.name.toLowerCase().includes(inv.name.slice(0, 10).toLowerCase()))
+            (inv.name.toLowerCase() === garment.name.toLowerCase() ||
+              (inv.category === garment.category &&
+                inv.name.toLowerCase().includes(garment.name.slice(0, 10).toLowerCase())))
         );
 
         const inStockUnits = matchingStock ? matchingStock.currentStock : 0;
@@ -684,10 +718,10 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             category: garment.category,
             size,
             unitCost: garment.unitCostCLP,
-            confirmedCount,
+            confirmedCount: confirmedUnits,
             bufferPercentage: planningConfig.bufferPercent,
             bufferUnits,
-            projectedSeasonalAddition: projectedAddition,
+            projectedSeasonalAddition: 0,
             totalToOrder: totalGrossToOrder,
             totalCost: grossCost,
             inStock: inStockUnits,
