@@ -19,10 +19,11 @@ import {
   PackageMinus,
   Layers,
   Sparkles,
+  Trash2,
 } from 'lucide-react';
 
 export const MovementsView: React.FC = () => {
-  const { movements, inventory, employees, addStockIngreso, addStockEntrega } = useUniforms();
+  const { movements, inventory, employees, addStockIngreso, addStockEntrega, deleteMovement } = useUniforms();
 
   // Filters
   const [activeTab, setActiveTab] = useState<'all' | 'ingreso' | 'entrega' | 'ajuste'>('all');
@@ -38,6 +39,16 @@ export const MovementsView: React.FC = () => {
   const showNotification = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleDeleteMovement = (id: string, code: string) => {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar el movimiento ${code} del historial?`)) {
+      deleteMovement(id);
+      if (selectedMovement?.id === id) {
+        setSelectedMovement(null);
+      }
+      showNotification(`Movimiento ${code} eliminado del historial.`);
+    }
   };
 
   // Helper to resolve company for a movement
@@ -598,14 +609,23 @@ export const MovementsView: React.FC = () => {
                       {mov.responsible}
                     </td>
 
-                    {/* Ver detalle */}
+                    {/* Ver detalle y acciones */}
                     <td className="py-3 px-3 text-center">
-                      <button
-                        onClick={() => setSelectedMovement(mov)}
-                        className="text-amber-700 font-semibold hover:underline text-xs"
-                      >
-                        Ver Ficha
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => setSelectedMovement(mov)}
+                          className="text-amber-700 font-semibold hover:underline text-xs"
+                        >
+                          Ver Ficha
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMovement(mov.id, mov.code)}
+                          title="Eliminar movimiento"
+                          className="text-slate-400 hover:text-rose-600 transition-colors p-1 rounded"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -725,8 +745,17 @@ export const MovementsView: React.FC = () => {
               )}
             </div>
 
-            <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+            <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
               <button
+                type="button"
+                onClick={() => handleDeleteMovement(selectedMovement.id, selectedMovement.code)}
+                className="px-3.5 py-2 rounded-xl text-rose-600 hover:bg-rose-50 border border-rose-200 font-semibold text-xs flex items-center gap-1.5 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Eliminar Movimiento</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setSelectedMovement(null)}
                 className="px-4 py-2 rounded-xl bg-slate-900 text-white font-semibold text-xs hover:bg-slate-800"
               >

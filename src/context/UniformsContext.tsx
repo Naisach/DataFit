@@ -69,6 +69,7 @@ interface UniformsContextType {
   }) => void;
   adjustStock: (id: string, newStock: number, reason: string, responsible: string) => void;
   updateInventoryItem: (id: string, updates: Partial<InventoryItem>) => void;
+  deleteMovement: (id: string) => void;
 
   // Employees
   employees: Employee[];
@@ -485,6 +486,10 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     );
   };
 
+  const deleteMovement = (id: string) => {
+    setMovements((prev) => prev.filter((m) => m.id !== id));
+  };
+
   // Employee Actions
   const addEmployee = (data: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newEmp: Employee = {
@@ -829,6 +834,7 @@ export const UniformsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addStockEntrega,
         adjustStock,
         updateInventoryItem,
+        deleteMovement,
         employees,
         addEmployee,
         updateEmployee,
